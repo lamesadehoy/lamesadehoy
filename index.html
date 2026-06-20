@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>La Mesa de Hoy</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 :root{--pr:#3d2008;--pd:#2a1505;--ac:#4a5e2a;--bg:#f9f6f0;--ca:#fff;--tx:#1a1a1a;--mu:#777;--bo:#e2d9c8;--ok:#4a5e2a;--da:#c62828;--ra:12px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -440,11 +442,51 @@ var S={
 };
 try{var sc=localStorage.getItem('lmdh_cli');if(sc)S.cliente=JSON.parse(sc);}catch(e){}
 
-// DB
-async function dbGet(k){try{var r=await window.storage.get(k);return r?JSON.parse(r.value):null;}catch(e){return null;}}
-async function dbSet(k,v){try{await window.storage.set(k,JSON.stringify(v));}catch(e){}}
-async function dbList(p){try{var r=await window.storage.list(p);return r?r.keys:[];}catch(e){return[];}}
-async function dbDel(k){try{await window.storage.delete(k);}catch(e){}}
+// FIREBASE
+var firebaseApp, db;
+function initFirebase(){
+  var cfg={
+    apiKey:"AIzaSyCE0QfuQC7RhAvzXl8KoZSVfeQFBoL_ZEw",
+    authDomain:"lamesadehoy-c2d51.firebaseapp.com",
+    projectId:"lamesadehoy-c2d51",
+    storageBucket:"lamesadehoy-c2d51.firebasestorage.app",
+    messagingSenderId:"494111220062",
+    appId:"1:494111220062:web:880e1a3f4527849b2d6fcf"
+  };
+  firebaseApp=firebase.initializeApp(cfg);
+  db=firebase.firestore();
+}
+
+// DB usando Firestore
+async function dbGet(k){
+  try{
+    var parts=k.split(':');
+    var col=parts[0]; var doc=parts.slice(1).join('_');
+    var snap=await db.collection(col).doc(doc).get();
+    return snap.exists?snap.data():null;
+  }catch(e){console.error('dbGet',e);return null;}
+}
+async function dbSet(k,v){
+  try{
+    var parts=k.split(':');
+    var col=parts[0]; var doc=parts.slice(1).join('_');
+    await db.collection(col).doc(doc).set(typeof v==='object'?v:{value:v});
+  }catch(e){console.error('dbSet',e);}
+}
+async function dbList(p){
+  try{
+    var col=p.replace(':','');
+    var snap=await db.collection(col).get();
+    return snap.docs.map(function(d){return col+':'+d.id;});
+  }catch(e){console.error('dbList',e);return[];}
+}
+async function dbDel(k){
+  try{
+    var parts=k.split(':');
+    var col=parts[0]; var doc=parts.slice(1).join('_');
+    await db.collection(col).doc(doc).delete();
+  }catch(e){console.error('dbDel',e);}
+}
 
 // CATEGORIAS DEFAULT
 var CATS_DEFAULT=['Combos','Milanesas de Pollo','Milanesas SIN TACC','Berenjenas al Escabeche','Bastones de Muzzarella','Empanadas y Canastitas','Hamburguesas de Pollo','Pizzas Congeladas','Chipa','Tartas Individuales','Huevos y Pollo','Dulces','Miel','Pet Friendly'];
@@ -1352,6 +1394,7 @@ function stockLabel(p){
 }
 
 document.getElementById('gf-fecha').value=new Date().toISOString().split('T')[0];
+initFirebase();
 init().then(cargarDemoData);
 
 async function cargarDemoData(){
