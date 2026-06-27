@@ -115,26 +115,16 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
 
 <!-- CATALOGO -->
 <div class="view active" id="view-catalogo">
-  <div class="card" style="margin-top:10px">
-    <div class="sec">Quien sos?</div>
-    <div id="login-form">
-      <label>Nombre y apellido</label><input id="inp-nombre" placeholder="Maria Gonzalez">
-      <label>Telefono WhatsApp</label><input id="inp-tel" type="tel" placeholder="1155556666">
-      <label>Direccion de entrega</label><input id="inp-dir" placeholder="Av. Corrientes 1234">
-      <label>Piso / Depto (opcional)</label><input id="inp-piso" placeholder="3 B">
-      <button class="btn bp" onclick="loginCliente()">Continuar</button>
+  <div id="cli-info" style="display:none;margin-top:10px" class="card">
+    <div class="pts-badge" id="pts-display" style="display:none">
+      <div><div class="pv" id="pts-val">0</div><div class="pl">puntos acumulados</div></div>
+      <div style="font-size:.75rem;text-align:right;opacity:.9">Cada $1000 = 1 punto<br>100 pts = $1000 descuento</div>
     </div>
-    <div id="cli-info" style="display:none">
-      <div class="pts-badge" id="pts-display" style="display:none">
-        <div><div class="pv" id="pts-val">0</div><div class="pl">puntos acumulados</div></div>
-        <div style="font-size:.75rem;text-align:right;opacity:.9">Cada $1000 = 1 punto<br>100 pts = $1000 descuento</div>
-      </div>
-      <p style="font-size:.88rem">Hola, <strong id="cli-nombre"></strong>!</p>
-      <p style="font-size:.75rem;color:var(--mu);margin-top:3px" id="cli-dir"></p>
-      <button class="btn bs" style="margin-top:7px;font-size:.77rem" onclick="logoutCliente()">Cambiar datos</button>
-    </div>
+    <p style="font-size:.88rem">Hola, <strong id="cli-nombre"></strong>!</p>
+    <p style="font-size:.75rem;color:var(--mu);margin-top:3px" id="cli-dir"></p>
+    <button class="btn bs" style="margin-top:7px;font-size:.77rem" onclick="logoutCliente()">Cambiar datos</button>
   </div>
-  <div id="catalogo-section" style="display:none">
+  <div id="catalogo-section">
     <div id="product-list"><div class="ld">Cargando...</div></div>
     <div id="cart-summary" style="display:none">
       <div class="card">
@@ -142,6 +132,16 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
         <div id="cart-preview"></div>
         <div class="ct" id="cart-total"></div>
         <div class="en" id="envio-note"></div>
+        <!-- FORMULARIO DE DATOS: aparece solo si no esta logueado -->
+        <div id="checkout-form" style="display:none">
+          <div style="background:#f5ece8;border-radius:10px;padding:11px;margin:10px 0">
+            <p style="font-size:.82rem;font-weight:700;color:var(--pr);margin-bottom:8px">Completa tus datos para finalizar</p>
+            <label>Nombre y apellido</label><input id="inp-nombre" placeholder="Maria Gonzalez">
+            <label>Telefono WhatsApp</label><input id="inp-tel" type="tel" placeholder="1155556666">
+            <label>Direccion de entrega</label><input id="inp-dir" placeholder="Av. Corrientes 1234">
+            <label>Piso / Depto (opcional)</label><input id="inp-piso" placeholder="3 B">
+          </div>
+        </div>
         <label>Dia de entrega</label><select id="inp-fecha-entrega"></select>
         <label>Forma de pago</label>
         <select id="inp-pago"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
@@ -543,6 +543,7 @@ async function init(){
   if(!c||!c.length) await dbSet('categorias',S.categorias);
   poblarCatSelects();
   if(S.cliente) renderClienteLoggeado();
+  else renderProductos();
   poblarFechas('inp-fecha-entrega');
   poblarFechas('np-fecha-entrega');
 }
@@ -661,11 +662,9 @@ async function loginCliente(){
   renderClienteLoggeado();
 }
 async function renderClienteLoggeado(){
-  document.getElementById('login-form').style.display='none';
   document.getElementById('cli-info').style.display='block';
   document.getElementById('cli-nombre').textContent=S.cliente.nombre;
   document.getElementById('cli-dir').textContent=S.cliente.dir+(S.cliente.piso?' - '+S.cliente.piso:'');
-  document.getElementById('catalogo-section').style.display='block';
   var cd=await dbGet('cliente:'+S.cliente.tel);
   var pts=cd?cd.puntos:0;
   if(pts>0){
@@ -679,13 +678,10 @@ async function renderClienteLoggeado(){
 function logoutCliente(){
   S.cliente=null;
   try{localStorage.removeItem('lmdh_cli');}catch(e){}
-  document.getElementById('login-form').style.display='block';
   document.getElementById('cli-info').style.display='none';
-  document.getElementById('catalogo-section').style.display='none';
   document.getElementById('pts-display').style.display='none';
   document.getElementById('pts-canje-section').style.display='none';
-  ['inp-nombre','inp-tel','inp-dir','inp-piso'].forEach(function(id){document.getElementById(id).value='';});
-  S.cart={}; updateBadge();
+  S.cart={}; updateBadge(); renderProductos();
 }
 
 // CATALOGO
@@ -729,6 +725,10 @@ function renderCartSummary(){
   var items=S.productos.filter(function(p){return S.cart[p.id]>0;});
   if(!items.length){document.getElementById('cart-summary').style.display='none';return;}
   document.getElementById('cart-summary').style.display='block';
+  // Mostrar formulario de datos solo si no está logueado
+  var cf=document.getElementById('checkout-form');
+  if(cf) cf.style.display=S.cliente?'none':'none'; // se activa al presionar Enviar
+  document.getElementById('cart-summary').style.display='block';
   var html='',total=0;
   items.forEach(function(p){var sub=p.precio*S.cart[p.id];total+=sub;html+='<div class="cr"><span>'+S.cart[p.id]+'x '+p.nombre+'</span><span>$'+sub.toLocaleString('es-AR')+'</span></div>';});
   var ptsc=parseInt(document.getElementById('inp-pts-canje')?document.getElementById('inp-pts-canje').value:0)||0;
@@ -742,9 +742,31 @@ function renderCartSummary(){
 
 // ENVIAR PEDIDO CLIENTE
 async function enviarPedido(){
-  if(!S.cliente){alert('Ingresa tus datos primero');return;}
   var items=S.productos.filter(function(p){return S.cart[p.id]>0;});
   if(!items.length){alert('Agrega al menos un producto');return;}
+
+  // Si no esta logueado, mostrar formulario de datos y guardarlos
+  if(!S.cliente){
+    var cf=document.getElementById('checkout-form');
+    if(cf.style.display==='none'){
+      cf.style.display='block';
+      cf.scrollIntoView({behavior:'smooth'});
+      return;
+    }
+    // Validar datos ingresados
+    var n=document.getElementById('inp-nombre').value.trim();
+    var t=document.getElementById('inp-tel').value.trim();
+    var d=document.getElementById('inp-dir').value.trim();
+    var p2=document.getElementById('inp-piso').value.trim();
+    if(!n||!t||!d){alert('Completa nombre, telefono y direccion para continuar');return;}
+    S.cliente={nombre:n,tel:t,dir:d,piso:p2};
+    try{localStorage.setItem('lmdh_cli',JSON.stringify(S.cliente));}catch(e){}
+    document.getElementById('checkout-form').style.display='none';
+    document.getElementById('cli-info').style.display='block';
+    document.getElementById('cli-nombre').textContent=S.cliente.nombre;
+    document.getElementById('cli-dir').textContent=S.cliente.dir+(S.cliente.piso?' - '+S.cliente.piso:'');
+  }
+
   var total=0;
   var det=items.map(function(p){var sub=p.precio*S.cart[p.id];total+=sub;return{nombre:p.nombre,qty:S.cart[p.id],precio:p.precio,sub:sub};});
   var ptsc=parseInt(document.getElementById('inp-pts-canje').value)||0;
