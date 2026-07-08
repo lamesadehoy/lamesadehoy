@@ -19,7 +19,7 @@ header{background:linear-gradient(135deg,#3d2008,#5c3010);color:#fff;padding:10p
 .tabs{display:flex;background:#fff;border-bottom:2px solid var(--bo);position:sticky;top:55px;z-index:99;overflow-x:auto;}
 .tab{flex:1;min-width:55px;padding:10px 2px;text-align:center;font-size:.68rem;font-weight:600;color:var(--mu);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;}
 .tab.active{color:var(--pr);border-bottom-color:var(--pr);}
-.view{display:none;padding:12px;max-width:520px;margin:0 auto;}
+.view{display:none;padding:12px;max-width:960px;margin:0 auto;}
 .view.active{display:block;}
 .card{background:var(--ca);border-radius:var(--ra);padding:13px;margin-bottom:10px;box-shadow:0 1px 5px rgba(0,0,0,.07);border:1px solid var(--bo);}
 label{font-size:.78rem;color:var(--mu);font-weight:600;display:block;margin:9px 0 3px;}
@@ -95,7 +95,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
 .empty .ico{font-size:2.4rem;margin-bottom:7px;}
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:flex-end;justify-content:center;}
 .mo.open{display:flex;}
-.md{background:#fff;border-radius:20px 20px 0 0;padding:19px 15px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
+.md{background:#fff;border-radius:20px 20px 0 0;padding:19px 15px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;}
 .md h2{font-size:1rem;margin-bottom:10px;color:var(--pr);}
 .wa{background:#25D366;color:#fff;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px;border-radius:10px;font-weight:700;font-size:.9rem;margin-top:8px;}
 .ld{text-align:center;padding:18px;color:var(--mu);font-size:.83rem;}
@@ -127,6 +127,11 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
 .foto-preview img{width:100%;height:100%;object-fit:cover;}
 .mp-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bo);}
 .mp-row:last-child{border-bottom:none;}
+.prod-resumen{background:linear-gradient(135deg,#f5ece8,#fdf9f7);border:1px solid var(--bo);border-radius:var(--ra);padding:13px;margin-bottom:12px;}
+.prod-resumen-title{font-size:.82rem;font-weight:800;color:var(--pr);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.prod-item-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bo);font-size:.84rem;}
+.prod-item-row:last-child{border-bottom:none;}
+.prod-qty{background:var(--pr);color:#fff;font-weight:800;font-size:.78rem;padding:3px 9px;border-radius:20px;}
 </style>
 </head>
 <body>
@@ -558,7 +563,50 @@ function adminLogin(){if(document.getElementById('inp-adm-pass').value===PASS){S
 async function renderCalendario(){var y=S.calYear,m=S.calMonth,meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];document.getElementById('cal-mes-label').textContent=meses[m]+' '+y;var keys=await dbList('pedido:'),todos=await Promise.all(keys.map(function(k){return dbGet(k);}));S.allPedidos=todos.filter(Boolean);var diasC={};S.allPedidos.forEach(function(p){if(p.fechaEntrega&&p.estado!=='cancelado'){var d=p.fechaEntrega.split('T')[0];diasC[d]=(diasC[d]||0)+1;}});var dias=['Dom','Lun','Mar','Mie','Jue','Vie','Sab'],html=dias.map(function(d){return'<div class="cal-day hdr">'+d+'</div>';}).join(''),pd=new Date(y,m,1).getDay();for(var i=0;i<pd;i++)html+='<div class="cal-day otromes"></div>';var dim=new Date(y,m+1,0).getDate(),hoyStr=new Date().toISOString().split('T')[0];for(var d2=1;d2<=dim;d2++){var ds=y+'-'+(m+1<10?'0'+(m+1):m+1)+'-'+(d2<10?'0'+d2:d2),cls='cal-day';if(ds===hoyStr)cls+=' today';if(S.calDaySelected===ds)cls+=' sel';if(diasC[ds])cls+=' haspeds';var cnt=diasC[ds]?'<br><span style="font-size:.6rem">('+diasC[ds]+')</span>':'';html+='<div class="'+cls+'" onclick="selectCalDay(\''+ds+'\')">'+d2+cnt+'</div>';}document.getElementById('cal-grid').innerHTML=html;if(S.calDaySelected)renderCalDay(S.calDaySelected);else document.getElementById('cal-day-orders').innerHTML='<div class="ld">Selecciona un dia del calendario</div>';}
 function calNav(d){S.calMonth+=d;if(S.calMonth>11){S.calMonth=0;S.calYear++;}if(S.calMonth<0){S.calMonth=11;S.calYear--;}renderCalendario();}
 function selectCalDay(ds){S.calDaySelected=ds;renderCalendario();}
-function renderCalDay(ds){var peds=S.allPedidos.filter(function(p){return p.fechaEntrega&&p.fechaEntrega.split('T')[0]===ds;}).sort(function(a,b){return a.ts-b.ts;}),label=new Date(ds+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}),tot=0;peds.filter(function(p){return p.estado!=='cancelado';}).forEach(function(p){tot+=p.total;});var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong style="font-size:.88rem">'+label+'</strong><span style="font-size:.78rem;color:var(--ok);font-weight:700">$'+tot.toLocaleString('es-AR')+'</span></div>';if(!peds.length)html+='<div class="empty"><div class="ico">-</div><p>Sin pedidos este dia</p></div>';else html+=peds.map(function(p){return renderPedidoCard(p);}).join('');document.getElementById('cal-day-orders').innerHTML=html;}
+function renderCalDay(ds){
+  var peds=S.allPedidos.filter(function(p){return p.fechaEntrega&&p.fechaEntrega.split('T')[0]===ds;}).sort(function(a,b){return a.ts-b.ts;});
+  var label=new Date(ds+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  var tot=0;
+  peds.filter(function(p){return p.estado!=='cancelado';}).forEach(function(p){tot+=p.total;});
+  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+'<strong style="font-size:.92rem;color:var(--pr)">'+label+'</strong>'+'<span style="font-size:.82rem;color:var(--ok);font-weight:800">$'+tot.toLocaleString('es-AR')+'</span></div>';
+  if(!peds.length){
+    html+='<div class="empty"><div class="ico">📅</div><p>Sin pedidos este dia</p></div>';
+    document.getElementById('cal-day-orders').innerHTML=html;
+    return;
+  }
+  // RESUMEN DE PRODUCCION
+  var mp={};
+  peds.filter(function(p){return p.estado!=='cancelado';}).forEach(function(ped){
+    ped.items.forEach(function(item){
+      // Buscar si es combo y expandir componentes
+      var combo=S.combos.find(function(c){return c.nombre===item.nombre;});
+      if(combo&&combo.componentes&&combo.componentes.length){
+        combo.componentes.forEach(function(comp){
+          var prod=S.productos.find(function(p){return p.id===comp.prodId;});
+          var nombre=prod?prod.nombre:comp.prodId;
+          mp[nombre]=(mp[nombre]||0)+(comp.qty*item.qty);
+        });
+      } else {
+        mp[item.nombre]=(mp[item.nombre]||0)+item.qty;
+      }
+    });
+  });
+  // Contar pedidos activos (no cancelados ni entregados)
+  var pedActivos=peds.filter(function(p){return p.estado!=='cancelado'&&p.estado!=='entregado';}).length;
+  var pedTotal=peds.filter(function(p){return p.estado!=='cancelado';}).length;
+  if(Object.keys(mp).length){
+    html+='<div class="prod-resumen">';
+    html+='<div class="prod-resumen-title">🧾 Necesito preparar — '+pedTotal+' pedido'+(pedTotal!==1?'s':'')+' ('+pedActivos+' pendiente'+(pedActivos!==1?'s':'')+')</div>';
+    Object.entries(mp).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
+      var icono=getCatIcon(S.productos.find(function(p){return p.nombre===e[0];})?S.productos.find(function(p){return p.nombre===e[0];}).cat:'');
+      html+='<div class="prod-item-row"><span>'+icono+' '+e[0]+'</span><span class="prod-qty">'+e[1]+' u</span></div>';
+    });
+    html+='</div>';
+  }
+  // PEDIDOS DEL DIA
+  html+=peds.map(function(p){return renderPedidoCard(p);}).join('');
+  document.getElementById('cal-day-orders').innerHTML=html;
+}
 
 async function renderAdminPedidos(){document.getElementById('adm-orders-list').innerHTML='<div class="ld">Cargando...</div>';var keys=await dbList('pedido:'),todos=await Promise.all(keys.map(function(k){return dbGet(k);})),filtro=document.getElementById('filtro-estado').value,peds=todos.filter(function(p){return p&&(!filtro||p.estado===filtro);}).sort(function(a,b){return b.ts-a.ts;});if(!peds.length){document.getElementById('adm-orders-list').innerHTML='<div class="empty"><div class="ico">-</div><p>Sin pedidos</p></div>';return;}document.getElementById('adm-orders-list').innerHTML=peds.map(function(p){return renderPedidoCard(p);}).join('');}
 
