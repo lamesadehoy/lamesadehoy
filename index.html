@@ -135,7 +135,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
 </head>
 <body>
 <header>
-  <div class="header-logo">
+  <div class="header-logo" id="header-logo" onclick="logoTap()">
     <img src="https://raw.githubusercontent.com/lamesadehoy/lamesadehoy/main/Gemini_Generated_Image_heuhrcheuhrcheuh.png" alt="La Mesa de Hoy" onerror="this.style.display='none'">
     <div><h1>La Mesa de Hoy</h1><small>Cocina saludable - Hecho con amor</small></div>
   </div>
@@ -144,7 +144,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
 <div class="tabs">
   <div class="tab active" onclick="switchTab('catalogo')">Catalogo</div>
   <div class="tab" onclick="switchTab('misPedidos')">Mis Pedidos</div>
-  <div class="tab" onclick="switchTab('admin')">Admin</div>
+  <div class="tab" id="tab-admin" onclick="switchTab('admin')" style="display:none">Admin</div>
 </div>
 
 <div class="view active" id="view-catalogo">
@@ -669,6 +669,21 @@ function renderResumen(){var hoy=new Date();document.getElementById('res-desde')
 
 function pedirDel(tipo,id,nombre){document.getElementById('del-msg').textContent=nombre;S.delFn=async function(){if(tipo==='prod'){S.productos=S.productos.filter(function(x){return x.id!==id;});await dbSet('productos',S.productos);renderAdminProductos();}else if(tipo==='combo'){S.combos=S.combos.filter(function(x){return x.id!==id;});await dbSet('combos',S.combos);renderAdminCombos();}else if(tipo==='gasto'){await dbDel('gasto:'+id);renderGastos();}closeModal('modal-del');};document.getElementById('modal-del').classList.add('open');}
 function confirmarDel(){if(S.delFn)S.delFn();}
+
+// ACCESO SECRETO ADMIN — 5 toques en el logo
+var logoTapCount=0, logoTapTimer=null;
+function logoTap(){
+  logoTapCount++;
+  if(logoTapTimer)clearTimeout(logoTapTimer);
+  if(logoTapCount>=5){
+    logoTapCount=0;
+    var tabAdmin=document.getElementById('tab-admin');
+    tabAdmin.style.display='flex';
+    switchTab('admin');
+  } else {
+    logoTapTimer=setTimeout(function(){logoTapCount=0;},2000);
+  }
+}
 
 document.getElementById('gf-fecha').value=new Date().toISOString().split('T')[0];
 initFirebase();
