@@ -226,6 +226,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
         <div class="at" onclick="admSwitch('nuevopedido')">+ Pedido</div>
         <div class="at" onclick="admSwitch('pedidos')">Pedidos</div>
         <div class="at" onclick="admSwitch('clientes')">Clientes</div>
+        <div class="at" onclick="admSwitch('categorias')">Categorias</div>
         <div class="at" onclick="admSwitch('productos')">Productos</div>
         <div class="at" onclick="admSwitch('combos')">Combos</div>
         <div class="at" onclick="admSwitch('stock')">Stock</div>
@@ -294,6 +295,19 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
         <div id="clientes-list"><div class="ld">Cargando...</div></div>
         <div id="cliente-detalle" style="display:none"></div>
       </div>
+            <div class="asec" id="adm-categorias">
+        <div class="card">
+          <div class="sec">Nueva categoria</div>
+          <div style="display:flex;gap:7px;align-items:flex-end">
+            <div style="flex:1">
+              <label style="margin-top:0">Nombre</label>
+              <input id="cat-nueva" placeholder="Ej: Bebidas" style="margin:0">
+            </div>
+            <button class="btn bp bsm" style="width:auto;margin:0;padding:9px 16px" onclick="agregarCategoria()">+ Agregar</button>
+          </div>
+        </div>
+        <div id="cat-modulo-list"><div class="ld">Cargando...</div></div>
+      </div>
       <div class="asec" id="adm-productos">
         <div class="card">
           <div class="sec" id="prod-form-title">Nuevo producto</div>
@@ -316,14 +330,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
             <button class="btn bs bsm" style="flex:1" onclick="cancelarEditProd()">Cancelar</button>
           </div>
         </div>
-        <div class="card">
-          <div class="sec">Categorias</div>
-          <div style="display:flex;gap:6px;margin-bottom:8px">
-            <input id="cat-nueva" placeholder="Ej: Bebidas" style="flex:1;margin:0">
-            <button class="btn bp bsm" style="width:auto;margin:0" onclick="agregarCategoria()">Agregar</button>
-          </div>
-          <div id="cat-list"></div>
-        </div>
+
         <div id="prod-list-adm"><div class="ld">Cargando...</div></div>
       </div>
       <div class="asec" id="adm-combos">
@@ -441,6 +448,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
 <div class="mo" id="modal-descuento"><div class="md"><h2>Aplicar descuento</h2><input type="hidden" id="desc-pedido-id"><label>Tipo</label><select id="desc-tipo" onchange="calcDescuento()"><option value="pct">Porcentaje (%)</option><option value="monto">Monto fijo ($)</option></select><label>Valor</label><input type="number" id="desc-valor" placeholder="Ej: 10" oninput="calcDescuento()"><div id="desc-preview" style="font-size:.85rem;color:var(--ok);margin-top:7px;font-weight:600"></div><label>Motivo (opcional)</label><input id="desc-motivo" placeholder="Ej: cliente frecuente"><div class="brow"><button class="btn bp bsm" style="flex:1" onclick="aplicarDescuento()">Aplicar</button><button class="btn bs bsm" style="flex:1" onclick="closeModal('modal-descuento')">Cancelar</button></div></div></div>
 <div class="mo" id="modal-obs"><div class="md"><h2>Observacion interna</h2><input type="hidden" id="obs-pedido-id"><label>Observacion</label><textarea id="obs-texto" rows="3" placeholder="Solo la ve Julieta..."></textarea><div class="brow"><button class="btn bp bsm" style="flex:1" onclick="guardarObs()">Guardar</button><button class="btn bs bsm" style="flex:1" onclick="closeModal('modal-obs')">Cancelar</button></div></div></div>
 <div class="mo" id="modal-edit-cat"><div class="md"><h2>Editar categoria</h2><input type="hidden" id="ecat-old"><label>Nuevo nombre</label><input id="ecat-nuevo" placeholder="Nombre de la categoria"><div class="brow"><button class="btn bp bsm" style="flex:1" onclick="guardarEditCat()">Guardar</button><button class="btn bs bsm" style="flex:1" onclick="closeModal('modal-edit-cat')">Cancelar</button></div></div></div>
+<div class="mo" id="modal-mover-cat"><div class="md"><h2>Mover productos antes de eliminar</h2><input type="hidden" id="mover-cat-origen"><p style="font-size:.84rem;color:var(--mu);margin-bottom:10px">Esta categoria tiene <strong id="mover-cat-cant"></strong> producto(s) activo(s). Antes de eliminarla, elegí a qué categoria moverlos:</p><label>Mover productos a</label><select id="mover-cat-destino"></select><div class="brow"><button class="btn bp bsm" style="flex:1" onclick="confirmarMoverYEliminar()">Mover y eliminar</button><button class="btn bs bsm" style="flex:1" onclick="closeModal('modal-mover-cat')">Cancelar</button></div></div></div>
 <div class="mo" id="modal-del"><div class="md"><h2>Confirmar eliminacion</h2><p id="del-msg" style="font-size:.88rem;margin-bottom:10px;font-weight:600"></p><div class="brow"><button class="btn bd bsm" style="flex:1" onclick="confirmarDel()">Si, eliminar</button><button class="btn bs bsm" style="flex:1" onclick="closeModal('modal-del')">Cancelar</button></div></div></div>
 <div class="mo" id="modal-favoritos"><div class="md"><h2>❤️ Mis favoritos</h2><div id="fav-list"></div><button class="btn bs" style="margin-top:10px" onclick="closeModal('modal-favoritos')">Cerrar</button></div></div>
 <script>
@@ -546,7 +554,7 @@ function poblarCatSelects(){var sel=document.getElementById('pf-cat');if(!sel)re
 function poblarFechas(selId){var sel=document.getElementById(selId);if(!sel)return;sel.innerHTML='';var hoy=new Date();for(var i=1;i<=14;i++){var d=new Date(hoy);d.setDate(hoy.getDate()+i);if(d.getDay()===0)continue;var dow=d.getDay(),label=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}),hor=dow===6?'Por la manana':'18:00 a 20:00hs',opt=document.createElement('option');opt.value=d.toISOString().split('T')[0];opt.textContent=label+' ('+hor+')';sel.appendChild(opt);}}
 
 function switchTab(t){var ts=['catalogo','misPedidos','admin'];document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.view').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.tab')[ts.indexOf(t)].classList.add('active');document.getElementById('view-'+t).classList.add('active');if(t==='misPedidos')renderMisPedidos();if(t==='admin'&&S.adminLogged)renderCalendario();}
-function admSwitch(s){var ss=['calendario','nuevopedido','pedidos','clientes','productos','combos','stock','gastos','resumen'];document.querySelectorAll('.at').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.asec').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.at')[ss.indexOf(s)].classList.add('active');document.getElementById('adm-'+s).classList.add('active');if(s==='calendario')renderCalendario();if(s==='nuevopedido')renderNpProductos();if(s==='pedidos')renderAdminPedidos();if(s==='clientes')renderClientes();if(s==='productos'){renderAdminProductos();renderCatList();}if(s==='combos'){renderAdminCombos();calcMateriaPrima();}if(s==='stock')renderStock();if(s==='gastos')renderGastos();if(s==='resumen')renderResumen();}
+function admSwitch(s){var ss=['calendario','nuevopedido','pedidos','clientes','categorias','productos','combos','stock','gastos','resumen'];document.querySelectorAll('.at').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.asec').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.at')[ss.indexOf(s)].classList.add('active');document.getElementById('adm-'+s).classList.add('active');if(s==='calendario')renderCalendario();if(s==='nuevopedido')renderNpProductos();if(s==='pedidos')renderAdminPedidos();if(s==='clientes')renderClientes();if(s==='categorias')renderModuloCategorias();if(s==='productos')renderAdminProductos();if(s==='combos'){renderAdminCombos();calcMateriaPrima();}if(s==='stock')renderStock();if(s==='gastos')renderGastos();if(s==='resumen')renderResumen();}
 
 async function renderClienteLoggeado(){
   document.getElementById('cli-info').style.display='block';
@@ -725,10 +733,79 @@ function cancelarEditProd(){['edit-prod-id','pf-nombre','pf-desc','pf-precio','p
 async function guardarProducto(){var n=document.getElementById('pf-nombre').value.trim(),pr=parseFloat(document.getElementById('pf-precio').value);if(!n||isNaN(pr)){alert('Completa nombre y precio');return;}var tags=[];if(document.getElementById('pf-st').checked)tags.push('sintacc');if(document.getElementById('pf-fr').checked)tags.push('congelado');var foto=document.getElementById('pf-foto').value.trim(),eid=document.getElementById('edit-prod-id').value;if(eid){S.productos.forEach(function(p){if(p.id===eid){p.nombre=n;p.cat=document.getElementById('pf-cat').value;p.desc=document.getElementById('pf-desc').value.trim();p.precio=pr;p.tags=tags;p.activo=document.getElementById('pf-act').checked;p.foto=foto;}});}else{S.productos.push({id:'p'+Date.now(),nombre:n,cat:document.getElementById('pf-cat').value,desc:document.getElementById('pf-desc').value.trim(),precio:pr,tags:tags,activo:true,stock:null,foto:foto});}await dbSetConfig('productos',S.productos);cancelarEditProd();renderAdminProductos();alert('Guardado');}
 async function toggleActivo(id){S.productos.forEach(function(p){if(p.id===id)p.activo=!p.activo;});await dbSetConfig('productos',S.productos);renderAdminProductos();}
 
-async function agregarCategoria(){var n=document.getElementById('cat-nueva').value.trim();if(!n){alert('Ingresa un nombre');return;}if(S.categorias.indexOf(n)>=0){alert('Ya existe esa categoria');return;}S.categorias.push(n);await dbSetConfig('categorias',S.categorias);document.getElementById('cat-nueva').value='';poblarCatSelects();renderCatList();}
+async function agregarCategoria(){
+  var n=document.getElementById('cat-nueva').value.trim();
+  if(!n){alert('Ingresa un nombre');return;}
+  if(S.categorias.indexOf(n)>=0){alert('Ya existe esa categoria');return;}
+  S.categorias.push(n);
+  await dbSetConfig('categorias',S.categorias);
+  document.getElementById('cat-nueva').value='';
+  poblarCatSelects();
+  renderModuloCategorias();
+}
+
+function renderModuloCategorias(){
+  var html=S.categorias.map(function(cat){
+    var prods=S.productos.filter(function(p){return p.cat===cat;});
+    var activos=prods.filter(function(p){return p.activo;}).length;
+    var total=prods.length;
+    return '<div class="card" style="padding:11px 13px;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<div>' +
+          '<span style="font-size:.95rem;font-weight:700">'+getCatIcon(cat)+' '+cat+'</span>' +
+          '<p style="font-size:.72rem;color:var(--mu);margin-top:2px">'+activos+' producto'+(activos!=1?'s':'')+' activo'+(activos!=1?'s':'')+' / '+total+' total</p>' +
+        '</div>' +
+        '<div class="brow" style="margin:0;gap:5px">' +
+          '<button class="btn bs bsm" onclick="abrirEditCat(''+cat.replace(/'/g,"\'")+'')" >✏️ Editar</button>' +
+          '<button class="btn bd bsm" onclick="pedirEliminarCat(''+cat.replace(/'/g,"\'")+'')">🗑️ Eliminar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('cat-modulo-list').innerHTML = html ||
+    '<div class="empty"><div class="ico">📂</div><p>Sin categorias cargadas</p></div>';
+}
+
+function pedirEliminarCat(cat){
+  var activos=S.productos.filter(function(p){return p.cat===cat&&p.activo;});
+  if(activos.length===0){
+    // Sin productos activos — eliminar directo
+    if(!confirm('Eliminar la categoria "'+cat+'"?'))return;
+    S.categorias=S.categorias.filter(function(c){return c!==cat;});
+    dbSetConfig('categorias',S.categorias).then(function(){
+      poblarCatSelects();
+      renderModuloCategorias();
+    });
+  } else {
+    // Tiene productos activos — ofrecer mover
+    document.getElementById('mover-cat-origen').value=cat;
+    document.getElementById('mover-cat-cant').textContent=activos.length;
+    var otras=S.categorias.filter(function(c){return c!==cat;});
+    document.getElementById('mover-cat-destino').innerHTML=
+      otras.map(function(c){return'<option value="'+c+'">'+getCatIcon(c)+' '+c+'</option>';}).join('');
+    document.getElementById('modal-mover-cat').classList.add('open');
+  }
+}
+
+async function confirmarMoverYEliminar(){
+  var origen=document.getElementById('mover-cat-origen').value;
+  var destino=document.getElementById('mover-cat-destino').value;
+  if(!destino){alert('Selecciona una categoria destino');return;}
+  // Mover todos los productos de origen a destino
+  S.productos.forEach(function(p){if(p.cat===origen)p.cat=destino;});
+  // Eliminar la categoria
+  S.categorias=S.categorias.filter(function(c){return c!==origen;});
+  await dbSetConfig('productos',S.productos);
+  await dbSetConfig('categorias',S.categorias);
+  closeModal('modal-mover-cat');
+  poblarCatSelects();
+  renderModuloCategorias();
+  renderAdminProductos();
+  alert('Listo! Los productos fueron movidos a "'+destino+'" y la categoria fue eliminada.');
+}
 function abrirEditCat(cat){document.getElementById('ecat-old').value=cat;document.getElementById('ecat-nuevo').value=cat;document.getElementById('modal-edit-cat').classList.add('open');}
-async function guardarEditCat(){var oldN=document.getElementById('ecat-old').value,newN=document.getElementById('ecat-nuevo').value.trim();if(!newN){alert('Ingresa un nombre');return;}var idx=S.categorias.indexOf(oldN);if(idx>=0)S.categorias[idx]=newN;S.productos.forEach(function(p){if(p.cat===oldN)p.cat=newN;});await dbSetConfig('categorias',S.categorias);await dbSetConfig('productos',S.productos);closeModal('modal-edit-cat');poblarCatSelects();renderCatList();renderAdminProductos();}
-async function eliminarCategoria(cat){var usada=S.productos.some(function(p){return p.cat===cat&&p.activo;});if(usada){alert('No se puede eliminar: hay productos activos en esta categoria');return;}S.categorias=S.categorias.filter(function(c){return c!==cat;});await dbSetConfig('categorias',S.categorias);poblarCatSelects();renderCatList();}
+async function guardarEditCat(){var oldN=document.getElementById('ecat-old').value,newN=document.getElementById('ecat-nuevo').value.trim();if(!newN){alert('Ingresa un nombre');return;}var idx=S.categorias.indexOf(oldN);if(idx>=0)S.categorias[idx]=newN;S.productos.forEach(function(p){if(p.cat===oldN)p.cat=newN;});await dbSetConfig('categorias',S.categorias);await dbSetConfig('productos',S.productos);closeModal('modal-edit-cat');poblarCatSelects();renderModuloCategorias();renderAdminProductos();}
+// eliminarCategoria reemplazada por pedirEliminarCat
 function renderCatList(){var html=S.categorias.map(function(c){var usada=S.productos.some(function(p){return p.cat===c&&p.activo;});return'<div class="cat-item"><span style="font-size:.88rem;font-weight:600">'+c+'</span><div class="brow" style="margin:0;gap:5px"><button class="btn bs bsm" onclick="abrirEditCat(\''+c.replace(/'/g,"\\'")+'\')">Editar</button><button class="btn bd bsm" onclick="eliminarCategoria(\''+c.replace(/'/g,"\\'")+'\''+')" '+(usada?'disabled style="opacity:.4"':'')+'>X</button></div></div>';}).join('');document.getElementById('cat-list').innerHTML=html||'<p style="font-size:.82rem;color:var(--mu)">Sin categorias</p>';}
 
 function renderAdminCombos(){var html=S.combos.map(function(c){return'<div class="card" style="'+(c.activo===false?'opacity:.5':'')+'"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><strong style="font-size:.92rem">'+c.nombre+'</strong><p style="font-size:.75rem;color:var(--mu);margin:3px 0">'+c.desc+'</p><p style="font-size:.82rem;font-weight:800;color:var(--pr)">$'+c.precio.toLocaleString('es-AR')+'</p>'+(c.componentes&&c.componentes.length?'<p style="font-size:.7rem;color:var(--ac);margin-top:3px">'+c.componentes.length+' componente(s)</p>':'<p style="font-size:.7rem;color:var(--da);margin-top:3px">Sin composicion</p>')+'</div><div style="display:flex;flex-direction:column;gap:4px;margin-left:8px"><button class="btn bs bsm" onclick="editarCombo(\''+c.id+'\')">Editar</button><button class="btn bsm" style="background:'+(c.activo!==false?'#fff3e0':'#e8f5e9')+';color:'+(c.activo!==false?'#e65100':'#2e7d32')+'" onclick="toggleCombo(\''+c.id+'\')">'+(c.activo!==false?'Pausar':'Activar')+'</button><button class="btn bd bsm" onclick="pedirDel(\'combo\',\''+c.id+'\',\''+c.nombre.replace(/'/g,'')+'\')">X</button></div></div></div>';}).join('');document.getElementById('combos-list-adm').innerHTML=html||'<div class="empty"><div class="ico">🎁</div><p>Sin combos</p></div>';}
