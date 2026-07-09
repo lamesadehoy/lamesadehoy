@@ -515,7 +515,24 @@ var PD=[
 ];
 
 async function dbGetConfig(key){
-  try{var snap=await db.collection('config').doc(key).get();if(!snap.exists)return null;var d=snap.data();return d&&d._json?JSON.parse(d._json):null;}catch(e){return null;}
+  try{
+    var snap=await db.collection('config').doc(key).get();
+    if(!snap.exists)return null;
+    var d=snap.data();
+    // Formato nuevo: {_json: "..."}
+    if(d&&d._json){try{return JSON.parse(d._json);}catch(e){return null;}}
+    // Formato viejo: objeto con keys numericas (array corrompido)
+    if(d&&typeof d==='object'){
+      var keys=Object.keys(d).filter(function(k){return!isNaN(k);});
+      if(keys.length>0){
+        var arr=keys.sort(function(a,b){return parseInt(a)-parseInt(b);}).map(function(k){return d[k];});
+        // Guardar en formato correcto para proximas veces
+        await dbSetConfig(key,arr);
+        return arr;
+      }
+    }
+    return null;
+  }catch(e){console.error('dbGetConfig',key,e);return null;}
 }
 async function dbSetConfig(key,val){
   try{await db.collection('config').doc(key).set({_json:JSON.stringify(val)});}catch(e){console.error('dbSetConfig',e);}
