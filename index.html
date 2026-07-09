@@ -762,46 +762,27 @@ async function agregarCategoria(){
 }
 
 function renderModuloCategorias(){
-  var html=S.categorias.map(function(cat){
+  var html='';
+  S.categorias.forEach(function(cat){
     var prods=S.productos.filter(function(p){return p.cat===cat;});
     var activos=prods.filter(function(p){return p.activo;}).length;
     var total=prods.length;
-    return '<div class="card" style="padding:11px 13px;margin-bottom:8px">' +
+    var catSafe=cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html+='<div class="card" style="padding:11px 13px;margin-bottom:8px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center">' +
         '<div>' +
           '<span style="font-size:.95rem;font-weight:700">'+getCatIcon(cat)+' '+cat+'</span>' +
           '<p style="font-size:.72rem;color:var(--mu);margin-top:2px">'+activos+' producto'+(activos!=1?'s':'')+' activo'+(activos!=1?'s':'')+' / '+total+' total</p>' +
         '</div>' +
         '<div class="brow" style="margin:0;gap:5px">' +
-          '<button class="btn bs bsm" onclick="abrirEditCat(''+cat.replace(/'/g,"\'")+'')" >✏️ Editar</button>' +
-          '<button class="btn bd bsm" onclick="pedirEliminarCat(''+cat.replace(/'/g,"\'")+'')">🗑️ Eliminar</button>' +
+          '<button class="btn bs bsm" onclick="abrirEditCat(this.dataset.cat)" data-cat="'+cat+'">✏️ Editar</button>' +
+          '<button class="btn bd bsm" onclick="pedirEliminarCat(this.dataset.cat)" data-cat="'+cat+'">🗑️ Eliminar</button>' +
         '</div>' +
       '</div>' +
     '</div>';
-  }).join('');
+  });
   document.getElementById('cat-modulo-list').innerHTML = html ||
     '<div class="empty"><div class="ico">📂</div><p>Sin categorias cargadas</p></div>';
-}
-
-function pedirEliminarCat(cat){
-  var activos=S.productos.filter(function(p){return p.cat===cat&&p.activo;});
-  if(activos.length===0){
-    // Sin productos activos — eliminar directo
-    if(!confirm('Eliminar la categoria "'+cat+'"?'))return;
-    S.categorias=S.categorias.filter(function(c){return c!==cat;});
-    dbSetConfig('categorias',S.categorias).then(function(){
-      poblarCatSelects();
-      renderModuloCategorias();
-    });
-  } else {
-    // Tiene productos activos — ofrecer mover
-    document.getElementById('mover-cat-origen').value=cat;
-    document.getElementById('mover-cat-cant').textContent=activos.length;
-    var otras=S.categorias.filter(function(c){return c!==cat;});
-    document.getElementById('mover-cat-destino').innerHTML=
-      otras.map(function(c){return'<option value="'+c+'">'+getCatIcon(c)+' '+c+'</option>';}).join('');
-    document.getElementById('modal-mover-cat').classList.add('open');
-  }
 }
 
 async function confirmarMoverYEliminar(){
