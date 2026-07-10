@@ -221,7 +221,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
       <button class="btn bp" onclick="adminLogin()">Ingresar</button>
     </div>
     <div id="adm-panel" style="display:none">
-      <div class="atab">
+      <div class="atab" style="position:sticky;top:84px;z-index:88;background:var(--bg);padding:6px 0 8px;margin:0 -12px;padding-left:12px;padding-right:12px;border-bottom:1px solid var(--bo);margin-bottom:10px;">
         <div class="at active" onclick="admSwitch('calendario')">Calendario</div>
         <div class="at" onclick="admSwitch('nuevopedido')">+ Pedido</div>
         <div class="at" onclick="admSwitch('pedidos')">Pedidos</div>
@@ -232,6 +232,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
         <div class="at" onclick="admSwitch('stock')">Stock</div>
         <div class="at" onclick="admSwitch('gastos')">Gastos</div>
         <div class="at" onclick="admSwitch('resumen')">Resumen</div>
+        <div class="at" onclick="admSwitch('puntos')">Puntos</div>
       </div>
       <div class="asec active" id="adm-calendario">
         <div class="card">
@@ -313,7 +314,8 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
           <div class="sec" id="prod-form-title">Nuevo producto</div>
           <input type="hidden" id="edit-prod-id">
           <label>Nombre</label><input id="pf-nombre" placeholder="Ej: Mila de Pollo x1 KG">
-          <label>Categoria</label><select id="pf-cat"></select>
+          <label>Categorias (selecciona una o mas)</label>
+          <div id="pf-cat-checks" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;padding:10px;background:#fdf9f7;border:1px solid var(--bo);border-radius:8px;max-height:160px;overflow-y:auto"></div>
           <label>Descripcion corta</label><input id="pf-desc" placeholder="Breve descripcion atractiva">
           <label>Precio ($)</label><input id="pf-precio" type="number" placeholder="14000">
           <label>Foto del producto (URL — dejar vacio por ahora)</label>
@@ -396,6 +398,56 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
           </div>
         </div>
         <div id="res-stats"><div class="ld">Calculando...</div></div>
+      </div>
+      <div class="asec" id="adm-puntos">
+        <div class="card">
+          <div class="sec">⚙️ Configuracion del programa</div>
+          <div class="g2" style="margin-bottom:10px">
+            <div>
+              <label>Puntos por cada $1000</label>
+              <input type="number" id="pts-cfg-por-mil" min="1" placeholder="1">
+            </div>
+            <div>
+              <label>Valor de cada punto ($)</label>
+              <input type="number" id="pts-cfg-valor" min="1" placeholder="10">
+            </div>
+            <div>
+              <label>Puntos para canjear descuento</label>
+              <input type="number" id="pts-cfg-para-desc" min="1" placeholder="100">
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button class="btn bp" style="margin:0" onclick="guardarConfigPuntos()">Guardar config</button>
+            </div>
+          </div>
+          <div id="pts-cfg-preview" style="font-size:.78rem;color:var(--mu);padding:8px;background:#f5ece8;border-radius:8px"></div>
+        </div>
+        <div class="card">
+          <div class="sec">🎁 Bonificaciones especiales</div>
+          <p style="font-size:.78rem;color:var(--mu);margin-bottom:10px">Agregá promociones temporales de puntos extra</p>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px">
+              <label style="margin-top:0">Descripcion</label>
+              <input id="bon-desc" placeholder="Ej: Doble puntos fin de semana">
+            </div>
+            <div style="width:80px">
+              <label style="margin-top:0">Multiplicador</label>
+              <input type="number" id="bon-mult" min="2" max="10" placeholder="2" value="2">
+            </div>
+            <div style="width:120px">
+              <label style="margin-top:0">Hasta</label>
+              <input type="date" id="bon-hasta">
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button class="btn bp bsm" style="margin:0;padding:9px 14px" onclick="agregarBonificacion()">+ Agregar</button>
+            </div>
+          </div>
+          <div id="bon-list" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <div class="sec">👥 Puntos por cliente</div>
+          <input id="pts-cli-search" placeholder="Buscar cliente por nombre o telefono..." oninput="buscarClientesPuntos()" style="margin-bottom:10px">
+          <div id="pts-clientes-list"><div class="ld">Cargando...</div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -571,7 +623,7 @@ function poblarCatSelects(){var sel=document.getElementById('pf-cat');if(!sel)re
 function poblarFechas(selId){var sel=document.getElementById(selId);if(!sel)return;sel.innerHTML='';var hoy=new Date();for(var i=1;i<=14;i++){var d=new Date(hoy);d.setDate(hoy.getDate()+i);if(d.getDay()===0)continue;var dow=d.getDay(),label=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}),hor=dow===6?'Por la manana':'18:00 a 20:00hs',opt=document.createElement('option');opt.value=d.toISOString().split('T')[0];opt.textContent=label+' ('+hor+')';sel.appendChild(opt);}}
 
 function switchTab(t){var ts=['catalogo','misPedidos','admin'];document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.view').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.tab')[ts.indexOf(t)].classList.add('active');document.getElementById('view-'+t).classList.add('active');if(t==='misPedidos')renderMisPedidos();if(t==='admin'&&S.adminLogged)renderCalendario();}
-function admSwitch(s){var ss=['calendario','nuevopedido','pedidos','clientes','categorias','productos','combos','stock','gastos','resumen'];document.querySelectorAll('.at').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.asec').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.at')[ss.indexOf(s)].classList.add('active');document.getElementById('adm-'+s).classList.add('active');if(s==='calendario')renderCalendario();if(s==='nuevopedido')renderNpProductos();if(s==='pedidos')renderAdminPedidos();if(s==='clientes')renderClientes();if(s==='categorias')renderModuloCategorias();if(s==='productos')renderAdminProductos();if(s==='combos'){renderAdminCombos();calcMateriaPrima();}if(s==='stock')renderStock();if(s==='gastos')renderGastos();if(s==='resumen')renderResumen();}
+function admSwitch(s){var ss=['calendario','nuevopedido','pedidos','clientes','categorias','productos','combos','stock','gastos','resumen','puntos'];document.querySelectorAll('.at').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.asec').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.at')[ss.indexOf(s)].classList.add('active');document.getElementById('adm-'+s).classList.add('active');if(s==='calendario')renderCalendario();if(s==='nuevopedido')renderNpProductos();if(s==='pedidos')renderAdminPedidos();if(s==='clientes')renderClientes();if(s==='categorias')renderModuloCategorias();if(s==='productos')renderAdminProductos();if(s==='puntos')renderModuloPuntos();if(s==='combos'){renderAdminCombos();calcMateriaPrima();}if(s==='stock')renderStock();if(s==='gastos')renderGastos();if(s==='resumen')renderResumen();}
 
 async function renderClienteLoggeado(){
   document.getElementById('cli-info').style.display='block';
@@ -592,8 +644,18 @@ function filtrarCat(cat){S.filtroActivo=cat;renderProductos();}
 
 function renderProductos(){
   var act=S.productos.filter(function(p){return p.activo;});
-  var filtrados=S.filtroActivo==='sintacc'?act.filter(function(p){return p.tags&&p.tags.indexOf('sintacc')>=0;}):S.filtroActivo!=='todos'?act.filter(function(p){return p.cat===S.filtroActivo;}):act;
-  var cats=[];act.forEach(function(p){if(cats.indexOf(p.cat)<0)cats.push(p.cat);});
+  var filtrados=S.filtroActivo==='sintacc'?act.filter(function(p){return p.tags&&p.tags.indexOf('sintacc')>=0;}):
+    S.filtroActivo!=='todos'?act.filter(function(p){
+      var cats=Array.isArray(p.cats)?p.cats:[p.cat];
+      return cats.indexOf(S.filtroActivo)>=0;
+    }):act;
+  var cats=[];
+  act.forEach(function(p){
+    var pc=Array.isArray(p.cats)?p.cats:[p.cat];
+    pc.forEach(function(c){if(cats.indexOf(c)<0)cats.push(c);});
+  });
+  // Ordenar segun S.categorias para mantener el orden
+  cats.sort(function(a,b){return S.categorias.indexOf(a)-S.categorias.indexOf(b);});
   renderCatNav(cats);
   var html='';
   if(S.filtroActivo==='todos'&&S.combos&&S.combos.length){
@@ -608,9 +670,17 @@ function renderProductos(){
       html+='</div>';
     }
   }
-  var catsFil=[];filtrados.forEach(function(p){if(catsFil.indexOf(p.cat)<0)catsFil.push(p.cat);});
+  var catsFil=[];
+  filtrados.forEach(function(p){
+    var pc=Array.isArray(p.cats)?p.cats:[p.cat];
+    pc.forEach(function(c){if(catsFil.indexOf(c)<0)catsFil.push(c);});
+  });
+  catsFil.sort(function(a,b){return S.categorias.indexOf(a)-S.categorias.indexOf(b);});
   catsFil.forEach(function(cat){
-    var prods=filtrados.filter(function(p){return p.cat===cat;});
+    var prods=filtrados.filter(function(p){
+      var pc=Array.isArray(p.cats)?p.cats:[p.cat];
+      return pc.indexOf(cat)>=0;
+    });
     if(!prods.length)return;
     html+='<div class="ch">'+getCatIcon(cat)+' '+cat+'</div>';
     prods.forEach(function(p){
@@ -745,9 +815,20 @@ async function verCliente(tel){var c=await dbGet('cliente:'+tel);if(!c)return;do
 function previewFoto(){var url=document.getElementById('pf-foto').value.trim(),prev=document.getElementById('pf-foto-preview');prev.innerHTML=url?'<img src="'+url+'" onerror="this.parentElement.innerHTML=\'<span>⚠️ URL no valida</span>\'">':'<span style="text-align:center">📷<br><small>Sin foto aun</small></span>';}
 function previewComboFoto(){var url=document.getElementById('cf-foto').value.trim(),prev=document.getElementById('cf-foto-preview');prev.innerHTML=url?'<img src="'+url+'" onerror="this.parentElement.innerHTML=\'<span>⚠️ URL no valida</span>\'">':'<span style="text-align:center">📷<br><small>Sin foto aun</small></span>';}
 function renderAdminProductos(){poblarCatSelects();var html=S.productos.map(function(p){return'<div class="pi" style="'+(p.activo?'':'opacity:.45')+'"><div class="pi-foto">'+fotoOrPlaceholder(p)+'</div><div class="pi-body"><div class="pi-info"><h3><span>'+p.nombre+(!p.activo?' <span class="tag" style="background:#eee;color:#999">Inactivo</span>':'')+'</span></h3><p>'+p.cat+'</p><div class="pp">$'+p.precio.toLocaleString('es-AR')+'</div></div></div><div style="display:flex;flex-direction:column;gap:4px;padding:0 8px"><button class="btn bs bsm" onclick="editarProducto(\''+p.id+'\')">Editar</button><button class="btn bsm" style="background:'+(p.activo?'#fff3e0':'#e8f5e9')+';color:'+(p.activo?'#e65100':'#2e7d32')+'" onclick="toggleActivo(\''+p.id+'\')">'+(p.activo?'Pausar':'Activar')+'</button><button class="btn bd bsm" onclick="pedirDel(\'prod\',\''+p.id+'\',\''+p.nombre.replace(/'/g,'')+'\')">X</button></div></div>';}).join('');document.getElementById('prod-list-adm').innerHTML=html||'<div class="empty"><div class="ico">-</div><p>Sin productos</p></div>';}
-function editarProducto(id){var p=S.productos.find(function(x){return x.id===id;});if(!p)return;document.getElementById('edit-prod-id').value=id;document.getElementById('pf-nombre').value=p.nombre;document.getElementById('pf-cat').value=p.cat;document.getElementById('pf-desc').value=p.desc||'';document.getElementById('pf-precio').value=p.precio;document.getElementById('pf-foto').value=p.foto||'';document.getElementById('pf-st').checked=p.tags&&p.tags.indexOf('sintacc')>=0;document.getElementById('pf-fr').checked=p.tags&&p.tags.indexOf('congelado')>=0;document.getElementById('pf-act').checked=p.activo!==false;document.getElementById('prod-form-title').textContent='Editar producto';previewFoto();document.getElementById('pf-nombre').scrollIntoView({behavior:'smooth'});}
-function cancelarEditProd(){['edit-prod-id','pf-nombre','pf-desc','pf-precio','pf-foto'].forEach(function(id){document.getElementById(id).value='';});['pf-st','pf-fr'].forEach(function(id){document.getElementById(id).checked=false;});document.getElementById('pf-act').checked=true;document.getElementById('prod-form-title').textContent='Nuevo producto';previewFoto();}
-async function guardarProducto(){var n=document.getElementById('pf-nombre').value.trim(),pr=parseFloat(document.getElementById('pf-precio').value);if(!n||isNaN(pr)){alert('Completa nombre y precio');return;}var tags=[];if(document.getElementById('pf-st').checked)tags.push('sintacc');if(document.getElementById('pf-fr').checked)tags.push('congelado');var foto=document.getElementById('pf-foto').value.trim(),eid=document.getElementById('edit-prod-id').value;if(eid){S.productos.forEach(function(p){if(p.id===eid){p.nombre=n;p.cat=document.getElementById('pf-cat').value;p.desc=document.getElementById('pf-desc').value.trim();p.precio=pr;p.tags=tags;p.activo=document.getElementById('pf-act').checked;p.foto=foto;}});}else{S.productos.push({id:'p'+Date.now(),nombre:n,cat:document.getElementById('pf-cat').value,desc:document.getElementById('pf-desc').value.trim(),precio:pr,tags:tags,activo:true,stock:null,foto:foto});}await dbSetConfig('productos',S.productos);cancelarEditProd();renderAdminProductos();alert('Guardado');}
+function editarProducto(id){var p=S.productos.find(function(x){return x.id===id;});if(!p)return;document.getElementById('edit-prod-id').value=id;document.getElementById('pf-nombre').value=p.nombre;// Marcar categorias del producto
+  document.querySelectorAll('.pf-cat-cb').forEach(function(cb){
+    var cats=Array.isArray(p.cats)?p.cats:[p.cat];
+    cb.checked=cats.indexOf(cb.value)>=0;
+  });document.getElementById('pf-desc').value=p.desc||'';document.getElementById('pf-precio').value=p.precio;document.getElementById('pf-foto').value=p.foto||'';document.getElementById('pf-st').checked=p.tags&&p.tags.indexOf('sintacc')>=0;document.getElementById('pf-fr').checked=p.tags&&p.tags.indexOf('congelado')>=0;document.getElementById('pf-act').checked=p.activo!==false;document.getElementById('prod-form-title').textContent='Editar producto';previewFoto();document.getElementById('pf-nombre').scrollIntoView({behavior:'smooth'});}
+function cancelarEditProd(){['edit-prod-id','pf-nombre','pf-desc','pf-precio','pf-foto'].forEach(function(id){document.getElementById(id).value='';});['pf-st','pf-fr'].forEach(function(id){document.getElementById(id).checked=false;});document.querySelectorAll('.pf-cat-cb').forEach(function(cb){cb.checked=false;});document.getElementById('pf-act').checked=true;document.getElementById('prod-form-title').textContent='Nuevo producto';previewFoto();}
+async function guardarProducto(){var n=document.getElementById('pf-nombre').value.trim(),pr=parseFloat(document.getElementById('pf-precio').value);if(!n||isNaN(pr)){alert('Completa nombre y precio');return;}var tags=[];if(document.getElementById('pf-st').checked)tags.push('sintacc');if(document.getElementById('pf-fr').checked)tags.push('congelado');
+  var foto=document.getElementById('pf-foto').value.trim();
+  var cats=Array.from(document.querySelectorAll('.pf-cat-cb:checked')).map(function(cb){return cb.value;});
+  if(!cats.length){alert('Selecciona al menos una categoria');return;}
+  var catPrincipal=cats[0];
+  var eid=document.getElementById('edit-prod-id').value;
+  if(eid){S.productos.forEach(function(p){if(p.id===eid){p.nombre=n;p.cat=catPrincipal;p.cats=cats;p.desc=document.getElementById('pf-desc').value.trim();p.precio=pr;p.tags=tags;p.activo=document.getElementById('pf-act').checked;p.foto=foto;}});}
+  else{S.productos.push({id:'p'+Date.now(),nombre:n,cat:catPrincipal,cats:cats,desc:document.getElementById('pf-desc').value.trim(),precio:pr,tags:tags,activo:true,stock:null,foto:foto});}await dbSetConfig('productos',S.productos);cancelarEditProd();renderAdminProductos();alert('Guardado');}
 async function toggleActivo(id){S.productos.forEach(function(p){if(p.id===id)p.activo=!p.activo;});await dbSetConfig('productos',S.productos);renderAdminProductos();}
 
 async function agregarCategoria(){
@@ -942,6 +1023,142 @@ async function _enviarPedidoCheckout(cli,fechaVal,fechaLabel,pago,nota){
   showConfirmModal(pedido,Math.floor(totalF/1000)*PTS_POR_MIL);
 }
 
+
+// ============================================================
+// MODULO PUNTOS Y BONIFICACIONES
+// ============================================================
+var CFG_PUNTOS={porMil:1,valorPunto:10,paraDesc:100};
+var BONIFICACIONES=[];
+
+async function renderModuloPuntos(){
+  // Cargar config
+  var cfg=await dbGetConfig('cfg_puntos');
+  if(cfg){CFG_PUNTOS=cfg;}
+  document.getElementById('pts-cfg-por-mil').value=CFG_PUNTOS.porMil;
+  document.getElementById('pts-cfg-valor').value=CFG_PUNTOS.valorPunto;
+  document.getElementById('pts-cfg-para-desc').value=CFG_PUNTOS.paraDesc;
+  actualizarPreviewPuntos();
+  // Cargar bonificaciones
+  var bons=await dbGetConfig('bonificaciones');
+  BONIFICACIONES=Array.isArray(bons)?bons:[];
+  renderBonificaciones();
+  // Cargar clientes
+  await buscarClientesPuntos();
+}
+
+function actualizarPreviewPuntos(){
+  var pm=parseInt(document.getElementById('pts-cfg-por-mil').value)||1;
+  var vp=parseInt(document.getElementById('pts-cfg-valor').value)||10;
+  var pd=parseInt(document.getElementById('pts-cfg-para-desc').value)||100;
+  var prev=document.getElementById('pts-cfg-preview');
+  prev.innerHTML='Por cada <strong>$1.000</strong> comprado el cliente gana <strong>'+pm+' punto'+(pm!=1?'s':'')+'</strong>. '+
+    'Cada punto vale <strong>$'+vp+'</strong>. '+
+    'Con <strong>'+pd+' puntos</strong> puede canjear <strong>$'+(pd*vp).toLocaleString('es-AR')+'</strong> de descuento.';
+}
+
+async function guardarConfigPuntos(){
+  var pm=parseInt(document.getElementById('pts-cfg-por-mil').value)||1;
+  var vp=parseInt(document.getElementById('pts-cfg-valor').value)||10;
+  var pd=parseInt(document.getElementById('pts-cfg-para-desc').value)||100;
+  CFG_PUNTOS={porMil:pm,valorPunto:vp,paraDesc:pd};
+  // Actualizar variables globales
+  PTS_POR_MIL=pm;VALOR_PUNTO=vp;PTS_PARA_DESC=pd;
+  await dbSetConfig('cfg_puntos',CFG_PUNTOS);
+  actualizarPreviewPuntos();
+  alert('Configuracion guardada!');
+}
+
+async function agregarBonificacion(){
+  var desc=document.getElementById('bon-desc').value.trim();
+  var mult=parseInt(document.getElementById('bon-mult').value)||2;
+  var hasta=document.getElementById('bon-hasta').value;
+  if(!desc||!hasta){alert('Completa descripcion y fecha limite');return;}
+  BONIFICACIONES.push({id:'B'+Date.now(),desc:desc,mult:mult,hasta:hasta,activa:true});
+  await dbSetConfig('bonificaciones',BONIFICACIONES);
+  document.getElementById('bon-desc').value='';
+  document.getElementById('bon-mult').value='2';
+  document.getElementById('bon-hasta').value='';
+  renderBonificaciones();
+}
+
+function renderBonificaciones(){
+function renderBonificaciones(){
+  var hoy=new Date().toISOString().split('T')[0];
+  var cont=document.getElementById('bon-list');
+  if(!BONIFICACIONES.length){cont.innerHTML='<p style="font-size:.82rem;color:var(--mu)">Sin bonificaciones activas</p>';return;}
+  cont.innerHTML='';
+  BONIFICACIONES.forEach(function(b){
+    var vencida=b.hasta<hoy;
+    var div=document.createElement('div');
+    div.className='card';
+    div.style.cssText='padding:10px;margin-bottom:6px;opacity:'+(vencida?'.5':'1');
+    var inner=document.createElement('div');
+    inner.style.cssText='display:flex;justify-content:space-between;align-items:center';
+    var info=document.createElement('div');
+    info.innerHTML='<strong style="font-size:.88rem">x'+b.mult+' — '+b.desc+'</strong>'+
+      '<p style="font-size:.72rem;color:var(--mu);margin-top:2px">Hasta: '+b.hasta+(vencida?' (VENCIDA)':'')+'</p>';
+    var btn=document.createElement('button');
+    btn.className='btn bd bsm';btn.textContent='X';
+    btn.onclick=(function(bid){return function(){eliminarBonificacion(bid);};})(b.id);
+    inner.appendChild(info);inner.appendChild(btn);
+    div.appendChild(inner);cont.appendChild(div);
+  });
+}
+
+async function eliminarBonificacion(id){
+  BONIFICACIONES=BONIFICACIONES.filter(function(b){return b.id!==id;});
+  await dbSetConfig('bonificaciones',BONIFICACIONES);
+  renderBonificaciones();
+}
+
+async function buscarClientesPuntos(){
+  var q=document.getElementById('pts-cli-search')?document.getElementById('pts-cli-search').value.trim().toLowerCase():'';
+  var keys=await dbList('cliente:');
+  var todos=await Promise.all(keys.map(function(k){return dbGet(k);}));
+  var clientes=todos.filter(function(c){
+    if(!c)return false;
+    if(!q)return true;
+    return c.nombre.toLowerCase().indexOf(q)>=0||c.tel.indexOf(q)>=0;
+  }).sort(function(a,b){return(b.puntos||0)-(a.puntos||0);});
+  var cont=document.getElementById('pts-clientes-list');
+  if(!clientes.length){cont.innerHTML='<div class="empty"><div class="ico">👥</div><p>Sin clientes</p></div>';return;}
+  cont.innerHTML='';
+  clientes.forEach(function(c){
+    var telSafe=c.tel.replace(/[^0-9]/g,'');
+    var div=document.createElement('div');
+    div.className='card';div.style.cssText='padding:10px;margin-bottom:6px';
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px';
+    hdr.innerHTML='<div><strong style="font-size:.88rem">'+c.nombre+'</strong><p style="font-size:.72rem;color:var(--mu)">'+c.tel+'</p></div>'+
+      '<div style="text-align:right"><span style="font-size:1.1rem;font-weight:800;color:var(--ac)">'+(c.puntos||0)+'</span>'+
+      '<span style="font-size:.72rem;color:var(--mu);display:block">puntos</span></div>';
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;gap:6px;align-items:center';
+    var ia=document.createElement('input');ia.type='number';ia.placeholder='Ajustar (+/-)';
+    ia.id='pts-adj-'+telSafe;ia.style.cssText='flex:1;margin:0;padding:6px 8px;font-size:.82rem';
+    var im=document.createElement('input');im.placeholder='Motivo';
+    im.id='pts-mot-'+telSafe;im.style.cssText='flex:2;margin:0;padding:6px 8px;font-size:.82rem';
+    var btn=document.createElement('button');btn.className='btn bp bsm';btn.style.margin='0';btn.textContent='Aplicar';
+    btn.onclick=(function(tel){return function(){ajustarPuntos(tel);};})(c.tel);
+    row.appendChild(ia);row.appendChild(im);row.appendChild(btn);
+    div.appendChild(hdr);div.appendChild(row);cont.appendChild(div);
+  });
+}
+
+
+async function ajustarPuntos(tel){
+  var telSafe=tel.replace(/[^0-9]/g,'');
+  var adj=parseInt(document.getElementById('pts-adj-'+telSafe).value)||0;
+  var mot=document.getElementById('pts-mot-'+telSafe).value.trim();
+  if(!adj){alert('Ingresa una cantidad de puntos');return;}
+  var cd=await dbGet('cliente:'+tel);
+  if(!cd){alert('Cliente no encontrado');return;}
+  cd.puntos=Math.max(0,(cd.puntos||0)+adj);
+  await dbSet('cliente:'+tel,cd);
+  alert('Puntos actualizados! Nuevo total: '+cd.puntos+' puntos'+(mot?' ('+mot+')':''));
+  buscarClientesPuntos();
+}
+
 // ACCESO SECRETO ADMIN — 5 toques en el logo
 var logoTapCount=0, logoTapTimer=null;
 function logoTap(){
@@ -962,6 +1179,7 @@ initFirebase();
 init().then(cargarDemoData);
 
 async function cargarDemoData(){var keys=await dbList('pedido:');if(keys.some(function(k){return k.indexOf('DEMO')>=0;}))return;var clientes=[{nombre:'Maria Gonzalez',tel:'1144445555',dir:'Av. Rivadavia 3240, CABA',piso:'3 B'},{nombre:'Carlos Mendez',tel:'1166667777',dir:'Corrientes 850, CABA',piso:''},{nombre:'Sofia Ramirez',tel:'1122223333',dir:'Belgrano 1120, CABA',piso:'PB'},{nombre:'Lucas Pereyra',tel:'1188889999',dir:'Santa Fe 3200, CABA',piso:'5 C'},{nombre:'Ana Torres',tel:'1100001111',dir:'Callao 456, CABA',piso:'1 B'},{nombre:'Diego Suarez',tel:'1133334444',dir:'Lavalle 780, CABA',piso:''}];function daysFrom(n){var d=new Date();d.setDate(d.getDate()+n);if(d.getDay()===0)d.setDate(d.getDate()+1);return d.toISOString().split('T')[0];}function lbl(s){var d=new Date(s+'T12:00:00'),dow=d.getDay();return d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})+' ('+(dow===6?'Por la manana':'18:00 a 20:00hs')+')';}var demos=[{id:'DEMO001',ts:Date.now()-6*86400000,fecha:'01/06/2026 09:12',fechaEntrega:daysFrom(-5),fechaEntregaLabel:lbl(daysFrom(-5)),cliente:clientes[0],items:[{nombre:'Mila de Pollo x1 KG',qty:2,precio:14000,sub:28000},{nombre:'Bastones de Muzza x6',qty:1,precio:10000,sub:10000}],subtotal:38000,descuentoPuntos:0,descuentoAdmin:0,descuentoMotivo:'',total:38000,nota:'Milanesas bien finitas',pago:'transferencia',envioGratis:true,estado:'entregado',obsInterna:'',telefonico:false},{id:'DEMO002',ts:Date.now()-5*86400000,fecha:'02/06/2026 11:30',fechaEntrega:daysFrom(-4),fechaEntregaLabel:lbl(daysFrom(-4)),cliente:clientes[1],items:[{nombre:'Combo Mix',qty:1,precio:32000,sub:32000}],subtotal:32000,descuentoPuntos:0,descuentoAdmin:3200,descuentoMotivo:'cliente frecuente',total:28800,nota:'',pago:'efectivo',envioGratis:true,estado:'entregado',obsInterna:'',telefonico:false},{id:'DEMO003',ts:Date.now()-4*86400000,fecha:'03/06/2026 08:45',fechaEntrega:daysFrom(-2),fechaEntregaLabel:lbl(daysFrom(-2)),cliente:clientes[2],items:[{nombre:'Mila Pollo SIN TACC x1 KG',qty:1,precio:22000,sub:22000},{nombre:'Pizza Muzzarella SIN TACC',qty:2,precio:15000,sub:30000}],subtotal:52000,descuentoPuntos:0,descuentoAdmin:0,descuentoMotivo:'',total:52000,nota:'Todo sin TACC',pago:'transferencia',envioGratis:true,estado:'entregado',obsInterna:'',telefonico:false},{id:'DEMO004',ts:Date.now()-2*86400000,fecha:'05/06/2026 10:05',fechaEntrega:daysFrom(1),fechaEntregaLabel:lbl(daysFrom(1)),cliente:clientes[3],items:[{nombre:'Combo Picada',qty:1,precio:31000,sub:31000}],subtotal:31000,descuentoPuntos:0,descuentoAdmin:0,descuentoMotivo:'',total:31000,nota:'Para una reunion',pago:'efectivo',envioGratis:true,estado:'listo',obsInterna:'',telefonico:false},{id:'DEMO005',ts:Date.now()-86400000,fecha:'06/06/2026 12:20',fechaEntrega:daysFrom(1),fechaEntregaLabel:lbl(daysFrom(1)),cliente:clientes[4],items:[{nombre:'Mila de Pollo x3 KG PROMO',qty:1,precio:39000,sub:39000}],subtotal:39000,descuentoPuntos:1000,descuentoAdmin:0,descuentoMotivo:'',total:38000,nota:'',pago:'transferencia',envioGratis:true,estado:'preparando',obsInterna:'',telefonico:false},{id:'DEMO006',ts:Date.now()-3600000,fecha:'07/06/2026 13:55',fechaEntrega:daysFrom(2),fechaEntregaLabel:lbl(daysFrom(2)),cliente:clientes[5],items:[{nombre:'Hamburguesas de Pollo x4',qty:2,precio:8000,sub:16000}],subtotal:16000,descuentoPuntos:0,descuentoAdmin:0,descuentoMotivo:'',total:16000,nota:'',pago:'efectivo',envioGratis:false,estado:'recibido',obsInterna:'',telefonico:false}];for(var i=0;i<demos.length;i++)await dbSet('pedido:'+demos[i].id,demos[i]);var cliMap={};demos.forEach(function(p){var t=p.cliente.tel;if(!cliMap[t])cliMap[t]={nombre:p.cliente.nombre,tel:t,dir:p.cliente.dir,puntos:0,totalCompras:0,pedidos:[]};cliMap[t].totalCompras+=p.total;cliMap[t].puntos+=Math.floor(p.total/1000);cliMap[t].pedidos.push(p.id);});var tels=Object.keys(cliMap);for(var j=0;j<tels.length;j++)await dbSet('cliente:'+tels[j],cliMap[tels[j]]);var gastos=[{id:'GDEMO1',fecha:'2026-06-01',cat:'mp',desc:'Compra pollo carniceria',monto:45000,estado:'pagado',ts:Date.now()-6*86400000},{id:'GDEMO2',fecha:'2026-06-02',cat:'pk',desc:'Bolsas y envases',monto:8500,estado:'pagado',ts:Date.now()-5*86400000},{id:'GDEMO3',fecha:'2026-06-03',cat:'mp',desc:'Carne nalga y peceto',monto:38000,estado:'pagado',ts:Date.now()-4*86400000},{id:'GDEMO4',fecha:'2026-06-06',cat:'svc',desc:'Gas mes de mayo',monto:18000,estado:'pendiente',ts:Date.now()-86400000},{id:'GDEMO5',fecha:'2026-06-07',cat:'otro',desc:'Alquiler cocina junio',monto:55000,estado:'pendiente',ts:Date.now()-1800000}];for(var k=0;k<gastos.length;k++)await dbSet('gasto:'+gastos[k].id,gastos[k]);}
+}
 </script>
 </body>
 </html>
