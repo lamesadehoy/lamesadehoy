@@ -619,7 +619,20 @@ function nlabel(e){return{recibido:'Confirmar',preparando:'Marcar listo',listo:'
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function showCart(){switchTab('catalogo');setTimeout(function(){var el=document.getElementById('cart-summary');if(el)el.scrollIntoView({behavior:'smooth'});},100);}
 
-function poblarCatSelects(){var sel=document.getElementById('pf-cat');if(!sel)return;var cur=sel.value;sel.innerHTML=S.categorias.map(function(c){return'<option value="'+c+'">'+c+'</option>';}).join('');if(cur)sel.value=cur;}
+function poblarCatSelects(){
+  var cont=document.getElementById('pf-cat-checks');
+  if(!cont)return;
+  cont.innerHTML='';
+  S.categorias.forEach(function(c){
+    var lbl=document.createElement('label');
+    lbl.style.cssText='display:flex;align-items:center;gap:4px;font-size:.78rem;font-weight:600;padding:4px 8px;background:#fff;border:1px solid var(--bo);border-radius:20px;cursor:pointer;white-space:nowrap';
+    var cb=document.createElement('input');
+    cb.type='checkbox';cb.className='pf-cat-cb';cb.value=c;
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(getCatIcon(c)+' '+c));
+    cont.appendChild(lbl);
+  });
+}
 function poblarFechas(selId){var sel=document.getElementById(selId);if(!sel)return;sel.innerHTML='';var hoy=new Date();for(var i=1;i<=14;i++){var d=new Date(hoy);d.setDate(hoy.getDate()+i);if(d.getDay()===0)continue;var dow=d.getDay(),label=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}),hor=dow===6?'Por la manana':'18:00 a 20:00hs',opt=document.createElement('option');opt.value=d.toISOString().split('T')[0];opt.textContent=label+' ('+hor+')';sel.appendChild(opt);}}
 
 function switchTab(t){var ts=['catalogo','misPedidos','admin'];document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.view').forEach(function(x){x.classList.remove('active');});document.querySelectorAll('.tab')[ts.indexOf(t)].classList.add('active');document.getElementById('view-'+t).classList.add('active');if(t==='misPedidos')renderMisPedidos();if(t==='admin'&&S.adminLogged)renderCalendario();}
