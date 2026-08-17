@@ -1177,6 +1177,23 @@ async function ajustarPuntos(tel){
 }
 
 
+async function borrarColeccion(colNombre){
+  var snap=await db.collection(colNombre).get();
+  if(snap.empty)return 0;
+  // Borrar de a 400 para no superar limite de batch
+  var total=snap.docs.length;
+  var chunks=[];
+  for(var i=0;i<snap.docs.length;i+=400){
+    chunks.push(snap.docs.slice(i,i+400));
+  }
+  for(var c=0;c<chunks.length;c++){
+    var batch=db.batch();
+    chunks[c].forEach(function(d){batch.delete(d.ref);});
+    await batch.commit();
+  }
+  return total;
+}
+
 async function limpiarDatosPrueba(){
   if(!confirm('Esto va a eliminar TODOS los pedidos, clientes y gastos. Los productos y categorias quedan intactos. Confirmas?'))return;
   if(!confirm('Ultima confirmacion — esta accion no se puede deshacer. Continuar?'))return;
@@ -1185,30 +1202,14 @@ async function limpiarDatosPrueba(){
   if(btnLimpiar){btnLimpiar.textContent='Limpiando...';btnLimpiar.disabled=true;}
 
   try{
-    // Borrar pedidos directamente desde Firestore
-    var pedSnap=await db.collection('pedido').get();
-    var pedBatch=db.batch();
-    pedSnap.docs.forEach(function(d){pedBatch.delete(d.ref);});
-    await pedBatch.commit();
-
-    // Borrar clientes
-    var cliSnap=await db.collection('cliente').get();
-    var cliBatch=db.batch();
-    cliSnap.docs.forEach(function(d){cliBatch.delete(d.ref);});
-    await cliBatch.commit();
-
-    // Borrar gastos
-    var gasSnap=await db.collection('gasto').get();
-    var gasBatch=db.batch();
-    gasSnap.docs.forEach(function(d){gasBatch.delete(d.ref);});
-    await gasBatch.commit();
-
-    var total=pedSnap.size+cliSnap.size+gasSnap.size;
-    alert('Listo! Se eliminaron '+pedSnap.size+' pedidos, '+cliSnap.size+' clientes y '+gasSnap.size+' gastos. Total: '+total+' registros.');
+    var pedidos=await borrarColeccion('pedido');
+    var clientes=await borrarColeccion('cliente');
+    var gastos=await borrarColeccion('gasto');
+    alert('Listo! Se eliminaron '+pedidos+' pedidos, '+clientes+' clientes y '+gastos+' gastos.');
     window.location.reload();
   }catch(e){
     console.error('Error limpiando:',e);
-    alert('Error: '+e.message+'. Intentalo de nuevo.');
+    alert('Error: '+e.message);
     if(btnLimpiar){btnLimpiar.textContent='Limpiar pedidos, clientes y gastos';btnLimpiar.disabled=false;}
   }
 }
