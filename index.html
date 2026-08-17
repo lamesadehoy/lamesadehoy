@@ -386,7 +386,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
         <div class="card" style="border:2px solid var(--da);margin-bottom:10px">
           <div class="sec" style="color:var(--da)">⚠️ Limpiar datos de prueba</div>
           <p style="font-size:.82rem;color:var(--mu);margin-bottom:10px">Esto elimina <strong>todos los pedidos, clientes y gastos</strong> cargados hasta ahora. Los productos, categorias y combos NO se tocan.</p>
-          <button class="btn bd" onclick="limpiarDatosPrueba()">🗑️ Limpiar pedidos, clientes y gastos</button>
+          <button class="btn bd" id="btn-limpiar" onclick="limpiarDatosPrueba()">🗑️ Limpiar pedidos, clientes y gastos</button>
         </div>
         <div class="card">
           <div class="sec">Periodo</div>
@@ -523,7 +523,7 @@ function initFirebase(){
 async function dbGet(k){try{var pts=k.split(':'),col=pts[0],doc=pts.slice(1).join('_'),snap=await db.collection(col).doc(doc).get();if(!snap.exists)return null;var d=snap.data();if(d&&d._json)return JSON.parse(d._json);return d;}catch(e){return null;}}
 async function dbSet(k,v){try{var pts=k.split(':'),col=pts[0],doc=pts.slice(1).join('_');var toSave=Array.isArray(v)?{_json:JSON.stringify(v)}:(typeof v==='object'?v:{value:v});await db.collection(col).doc(doc).set(toSave);}catch(e){console.error(e);}}
 async function dbList(p){try{var col=p.replace(':',''),snap=await db.collection(col).get();return snap.docs.map(function(d){return col+':'+d.id;});}catch(e){return[];}}
-async function dbDel(k){try{var pts=k.split(':'),col=pts[0],doc=pts.slice(1).join('_');await db.collection(col).doc(doc).delete();}catch(e){}}
+async function dbDel(k){try{var pts=k.split(':'),col=pts[0],doc=pts.slice(1).join('_');await db.collection(col).doc(doc).delete();}catch(e){console.error('dbDel',e);}}
 
 var CATS_DEFAULT=['Milanesas de Pollo','Milanesas SIN TACC','Berenjenas al Escabeche','Bastones de Muzzarella','Empanadas y Canastitas','Hamburguesas de Pollo','Pizzas Congeladas','Chipa','Tartas Individuales','Huevos y Pollo','Dulces','Miel','Pet Friendly'];
 var COMBOS_DEFAULT=[
@@ -1180,32 +1180,36 @@ async function ajustarPuntos(tel){
 async function limpiarDatosPrueba(){
   if(!confirm('Esto va a eliminar TODOS los pedidos, clientes y gastos. Los productos y categorias quedan intactos. Confirmas?'))return;
   if(!confirm('Ultima confirmacion — esta accion no se puede deshacer. Continuar?'))return;
-  
-  document.querySelector('.btn.bd').textContent='Limpiando...';
-  document.querySelector('.btn.bd').disabled=true;
-  
+
+  var btnLimpiar=document.getElementById('btn-limpiar');
+  if(btnLimpiar){btnLimpiar.textContent='Limpiando...';btnLimpiar.disabled=true;}
+
   try{
-    // Borrar pedidos
-    var pedKeys=await dbList('pedido:');
-    for(var i=0;i<pedKeys.length;i++){await dbDel(pedKeys[i]);}
-    
+    // Borrar pedidos directamente desde Firestore
+    var pedSnap=await db.collection('pedido').get();
+    var pedBatch=db.batch();
+    pedSnap.docs.forEach(function(d){pedBatch.delete(d.ref);});
+    await pedBatch.commit();
+
     // Borrar clientes
-    var cliKeys=await dbList('cliente:');
-    for(var j=0;j<cliKeys.length;j++){await dbDel(cliKeys[j]);}
-    
+    var cliSnap=await db.collection('cliente').get();
+    var cliBatch=db.batch();
+    cliSnap.docs.forEach(function(d){cliBatch.delete(d.ref);});
+    await cliBatch.commit();
+
     // Borrar gastos
-    var gasKeys=await dbList('gasto:');
-    for(var k=0;k<gasKeys.length;k++){await dbDel(gasKeys[k]);}
-    
-    alert('Listo! Se eliminaron '+pedKeys.length+' pedidos, '+cliKeys.length+' clientes y '+gasKeys.length+' gastos. La plataforma esta lista para datos reales.');
-    
-    // Recargar la pagina
+    var gasSnap=await db.collection('gasto').get();
+    var gasBatch=db.batch();
+    gasSnap.docs.forEach(function(d){gasBatch.delete(d.ref);});
+    await gasBatch.commit();
+
+    var total=pedSnap.size+cliSnap.size+gasSnap.size;
+    alert('Listo! Se eliminaron '+pedSnap.size+' pedidos, '+cliSnap.size+' clientes y '+gasSnap.size+' gastos. Total: '+total+' registros.');
     window.location.reload();
   }catch(e){
     console.error('Error limpiando:',e);
-    alert('Hubo un error al limpiar. Intentalo de nuevo.');
-    document.querySelector('.btn.bd').textContent='Limpiar pedidos, clientes y gastos';
-    document.querySelector('.btn.bd').disabled=false;
+    alert('Error: '+e.message+'. Intentalo de nuevo.');
+    if(btnLimpiar){btnLimpiar.textContent='Limpiar pedidos, clientes y gastos';btnLimpiar.disabled=false;}
   }
 }
 
