@@ -48,6 +48,11 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
 .qb:active{background:var(--pr);color:#fff;}
 .qn{font-weight:700;min-width:18px;text-align:center;font-size:.95rem;}
 .fav-btn{background:none;border:none;cursor:pointer;font-size:1.1rem;padding:2px 4px;line-height:1;flex-shrink:0;}
+.np-layout{display:flex;gap:12px;align-items:flex-start;}
+.np-main{flex:1;min-width:0;}
+.np-sidebar{width:300px;flex-shrink:0;position:sticky;top:140px;}
+@media(max-width:700px){.np-layout{flex-direction:column;}.np-sidebar{width:100%;position:static;}}
+.np-resumen-card{background:var(--ca);border:1.5px solid var(--pr);border-radius:var(--ra);padding:13px;}
 .buscador-wrap{padding:8px 0 4px;margin-bottom:2px;}
 .buscador-input{width:100%;padding:9px 14px 9px 38px;border:1.5px solid var(--bo);border-radius:25px;font-size:.88rem;background:#fff;color:var(--tx);outline:none;transition:border .2s;}
 .buscador-input:focus{border-color:var(--pr);}
@@ -853,7 +858,7 @@ function reloadAdm(){var a=document.querySelector('.asec.active');if(!a)return;v
 
 async function npBuscarCliente(){var q=document.getElementById('np-buscar').value.trim().toLowerCase();if(!q)return;var keys=await dbList('cliente:'),todos=await Promise.all(keys.map(function(k){return dbGet(k);})),res=todos.filter(function(c){return c&&(c.nombre.toLowerCase().indexOf(q)>=0||c.tel.indexOf(q)>=0);});if(!res.length){document.getElementById('np-resultados').innerHTML='<p style="font-size:.8rem;color:var(--mu)">No encontrado.</p>';return;}document.getElementById('np-resultados').innerHTML='<p style="font-size:.78rem;color:var(--mu);margin-bottom:5px">Selecciona:</p>'+res.map(function(c){return'<div class="card" style="padding:9px;cursor:pointer;margin-bottom:5px" onclick="npSelCliente(\''+c.tel+'\')"><strong style="font-size:.88rem">'+c.nombre+'</strong><p style="font-size:.75rem;color:var(--mu)">'+c.tel+' - '+c.dir+'</p></div>';}).join('');}
 async function npSelCliente(tel){var c=await dbGet('cliente:'+tel);if(!c)return;document.getElementById('np-nombre').value=c.nombre;document.getElementById('np-tel').value=c.tel;document.getElementById('np-dir').value=c.dir;document.getElementById('np-piso').value=c.piso||'';document.getElementById('np-resultados').innerHTML='<p style="font-size:.78rem;color:var(--ok);font-weight:600;margin-bottom:5px">Seleccionado: '+c.nombre+'</p>';}
-function renderNpProductos(busq){var busqueda=busq?busq.trim().toLowerCase():'';
+function renderNpProductos(busq){S.npCart={};var busqueda=busq?busq.trim().toLowerCase():'';
   var act=S.productos.filter(function(p){
     if(!p.activo)return false;
     if(!busqueda)return true;
@@ -863,7 +868,7 @@ function renderNpProductos(busq){var busqueda=busq?busq.trim().toLowerCase():'';
   }),cats=[];act.forEach(function(p){if(cats.indexOf(p.cat)<0)cats.push(p.cat);});var html='';if(S.combos&&S.combos.length){html+='<div class="ch">🎁 Combos</div>';S.combos.filter(function(c){return c.activo!==false;}).forEach(function(c){html+='<div class="pi"><div class="pi-foto"><div class="pi-placeholder">🎁</div></div><div class="pi-body"><div class="pi-info"><h3><span>'+c.nombre+'</span></h3><p>'+c.desc+'</p><div class="pp">$'+c.precio.toLocaleString('es-AR')+'</div></div></div><div class="qc"><button class="qb" onclick="npChgQty(\'combo_'+c.id+'\',-1)">-</button><span class="qn" id="npqty-combo_'+c.id+'">0</span><button class="qb" onclick="npChgQty(\'combo_'+c.id+'\',1)">+</button></div></div>';});}cats.forEach(function(cat){html+='<div class="ch">'+getCatIcon(cat)+' '+cat+'</div>';act.filter(function(p){return p.cat===cat;}).forEach(function(p){html+='<div class="pi"><div class="pi-foto">'+fotoOrPlaceholder(p)+'</div><div class="pi-body"><div class="pi-info"><h3><span>'+p.nombre+'</span></h3>'+(p.desc?'<p>'+p.desc+'</p>':'')+'<div class="pp">$'+p.precio.toLocaleString('es-AR')+'</div></div></div><div class="qc"><button class="qb" onclick="npChgQty(\''+p.id+'\',-1)">-</button><span class="qn" id="npqty-'+p.id+'">0</span><button class="qb" onclick="npChgQty(\''+p.id+'\',1)">+</button></div></div>';});});document.getElementById('np-product-list').innerHTML=html;document.getElementById('np-cart-section').style.display='none';}
 function npChgQty(id,d){S.npCart[id]=Math.max(0,(S.npCart[id]||0)+d);var el=document.getElementById('npqty-'+id);if(el)el.textContent=S.npCart[id];npRenderCart();}
 function npCalcDesc(){npRenderCart();}
-function npRenderCart(){var items=[];S.productos.filter(function(p){return S.npCart[p.id]>0;}).forEach(function(p){items.push({nombre:p.nombre,qty:S.npCart[p.id],precio:p.precio,sub:p.precio*S.npCart[p.id]});});S.combos.forEach(function(c){var k='combo_'+c.id;if(S.npCart[k]>0)items.push({nombre:c.nombre,qty:S.npCart[k],precio:c.precio,sub:c.precio*S.npCart[k]});});if(!items.length){document.getElementById('np-cart-section').style.display='none';return;}document.getElementById('np-cart-section').style.display='block';var html='',total=0;items.forEach(function(i){total+=i.sub;html+='<div class="cr"><span>'+i.qty+'x '+i.nombre+'</span><span>$'+i.sub.toLocaleString('es-AR')+'</span></div>';});var tipo=document.getElementById('np-desc-tipo').value,dval=parseFloat(document.getElementById('np-desc-val').value)||0,desc=tipo==='pct'?Math.round(total*dval/100):dval,totalF=Math.max(0,total-desc);if(desc>0)html+='<div class="cr"><span>Descuento</span><span style="color:var(--ok)">-$'+desc.toLocaleString('es-AR')+'</span></div>';document.getElementById('np-cart-preview').innerHTML=html;document.getElementById('np-cart-total').textContent='Total: $'+totalF.toLocaleString('es-AR');document.getElementById('np-desc-preview').textContent=desc>0?'Descuento: $'+desc.toLocaleString('es-AR'):'';}
+function npRenderCart(){var items=[];S.productos.filter(function(p){return S.npCart[p.id]>0;}).forEach(function(p){items.push({nombre:p.nombre,qty:S.npCart[p.id],precio:p.precio,sub:p.precio*S.npCart[p.id]});});S.combos.forEach(function(c){var k='combo_'+c.id;if(S.npCart[k]>0)items.push({nombre:c.nombre,qty:S.npCart[k],precio:c.precio,sub:c.precio*S.npCart[k]});});var sidebar=document.getElementById('np-cart-section');if(sidebar)sidebar.style.display=items.length?'block':'none';var html='',total=0;items.forEach(function(i){total+=i.sub;html+='<div class="cr"><span>'+i.qty+'x '+i.nombre+'</span><span>$'+i.sub.toLocaleString('es-AR')+'</span></div>';});var tipo=document.getElementById('np-desc-tipo').value,dval=parseFloat(document.getElementById('np-desc-val').value)||0,desc=tipo==='pct'?Math.round(total*dval/100):dval,totalF=Math.max(0,total-desc);if(desc>0)html+='<div class="cr"><span>Descuento</span><span style="color:var(--ok)">-$'+desc.toLocaleString('es-AR')+'</span></div>';document.getElementById('np-cart-preview').innerHTML=html;document.getElementById('np-cart-total').textContent='Total: $'+totalF.toLocaleString('es-AR');document.getElementById('np-desc-preview').textContent=desc>0?'Descuento: $'+desc.toLocaleString('es-AR'):'';}
 async function npEnviarPedido(){var n=document.getElementById('np-nombre').value.trim(),t=document.getElementById('np-tel').value.trim(),d=document.getElementById('np-dir').value.trim();if(!n||!t||!d){alert('Completa nombre, telefono y direccion');return;}var items=[];S.productos.filter(function(p){return S.npCart[p.id]>0;}).forEach(function(p){items.push({nombre:p.nombre,qty:S.npCart[p.id],precio:p.precio,sub:p.precio*S.npCart[p.id]});});S.combos.forEach(function(c){var k='combo_'+c.id;if(S.npCart[k]>0)items.push({nombre:c.nombre,qty:S.npCart[k],precio:c.precio,sub:c.precio*S.npCart[k]});});if(!items.length){alert('Agrega al menos un producto');return;}var total=0;items.forEach(function(i){total+=i.sub;});var tipo=document.getElementById('np-desc-tipo').value,dval=parseFloat(document.getElementById('np-desc-val').value)||0,desc=tipo==='pct'?Math.round(total*dval/100):dval,totalF=Math.max(0,total-desc),fsel=document.getElementById('np-fecha-entrega'),id='P'+Date.now();var pedido={id:id,fecha:new Date().toLocaleString('es-AR'),ts:Date.now(),fechaEntrega:fsel.value,fechaEntregaLabel:fsel.options[fsel.selectedIndex].text,cliente:{nombre:n,tel:t,dir:d,piso:document.getElementById('np-piso').value.trim()},items:items,subtotal:total,descuentoPuntos:0,descuentoAdmin:desc,descuentoMotivo:'pedido telefonico',total:totalF,nota:document.getElementById('np-nota').value.trim(),pago:document.getElementById('np-pago').value,envioGratis:total>=20000,estado:estadoSel,obsInterna:'',telefonico:true};await dbSet('pedido:'+id,pedido);await actualizarCliente(pedido,0);S.npCart={};renderNpProductos();['np-nombre','np-tel','np-dir','np-piso','np-nota','np-buscar','np-desc-val'].forEach(function(el){document.getElementById(el).value='';});document.getElementById('np-resultados').innerHTML='';alert('Pedido telefonico registrado! ID: '+id);admSwitch('calendario');}
 
 async function abrirDescuento(id){var p=await dbGet('pedido:'+id);if(!p)return;document.getElementById('desc-pedido-id').value=id;document.getElementById('desc-valor').value='';document.getElementById('desc-preview').textContent='Subtotal: $'+p.subtotal.toLocaleString('es-AR');document.getElementById('desc-motivo').value=p.descuentoMotivo||'';document.getElementById('modal-descuento').classList.add('open');}
@@ -1309,6 +1314,25 @@ function limpiarBuscadorNp(){
   var clear=document.getElementById('buscador-np-clear');
   if(clear)clear.style.display='none';
   renderNpProductos('');
+}
+
+
+function npCancelarPedido(){
+  if(!confirm('Cancelar el pedido? Se van a limpiar todos los productos seleccionados.'))return;
+  S.npCart={};
+  // Resetear todos los contadores visuales
+  document.querySelectorAll('[id^="npqty-"]').forEach(function(el){el.textContent='0';});
+  // Limpiar campos
+  ['np-nombre','np-tel','np-dir','np-piso','np-nota','np-buscar','np-desc-val'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('np-resultados').innerHTML='';
+  document.getElementById('np-cart-section').style.display='none';
+  document.getElementById('np-cart-preview').innerHTML='<p style="font-size:.8rem;color:var(--mu);text-align:center;padding:10px 0">Agrega productos para ver el resumen</p>';
+  document.getElementById('np-cart-total').textContent='';
+  document.getElementById('np-desc-preview').textContent='';
+  // Limpiar buscador
+  limpiarBuscadorNp();
 }
 
 // ACCESO SECRETO ADMIN — 5 toques en el logo
