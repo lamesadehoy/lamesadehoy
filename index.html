@@ -197,7 +197,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
           </div>
           <div id="pts-desc-disp" style="font-size:.78rem;color:var(--ok);margin-top:3px;font-weight:600"></div>
         </div>
-        <button class="btn bp" onclick="enviarPedido()">Enviar pedido</button>
+        <button class="btn bp" id="btn-enviar-pedido" onclick="enviarPedido()">Enviar pedido</button>
       </div>
     </div>
   </div>
@@ -480,7 +480,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
       <select id="co-pago-k"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
       <label>Nota (opcional)</label>
       <textarea id="co-nota-k" rows="2" placeholder="Ej: sin ajo, bien finitas..."></textarea>
-      <button class="btn bp" onclick="checkoutEnviarConocido()">Enviar pedido</button>
+      <button class="btn bp" id="btn-enviar-checkout" onclick="checkoutEnviarConocido()">Enviar pedido</button>
       <button class="btn bs" onclick="closeModal('modal-checkout')">Cancelar</button>
     </div>
     <div id="checkout-step2-nuevo" style="display:none">
@@ -736,6 +736,7 @@ function getCartItems(){var items=[];S.productos.filter(function(p){return S.car
 function renderCartSummary(){var items=getCartItems();if(!items.length){document.getElementById('cart-summary').style.display='none';return;}document.getElementById('cart-summary').style.display='block';var cf=document.getElementById('checkout-form');if(cf)cf.style.display='none';var html='',total=0;items.forEach(function(i){total+=i.sub;html+='<div class="cr"><span>'+i.qty+'x '+i.nombre+'</span><span>$'+i.sub.toLocaleString('es-AR')+'</span></div>';});var ptsc=parseInt(document.getElementById('inp-pts-canje').value)||0,dp=ptsc*VALOR_PUNTO;if(ptsc>0)html+='<div class="cr"><span>Desc. puntos</span><span style="color:var(--ok)">-$'+dp.toLocaleString('es-AR')+'</span></div>';document.getElementById('cart-preview').innerHTML=html;document.getElementById('cart-total').textContent='Total: $'+Math.max(0,total-dp).toLocaleString('es-AR');document.getElementById('envio-note').textContent=total>=20000?'Envio incluido!':'Te faltan $'+(20000-total).toLocaleString('es-AR')+' para envio gratis';}
 
 async function enviarPedido(){
+  if(S_ENVIANDO){return;} // Evitar doble envio
   var items=getCartItems();if(!items.length){alert('Agrega al menos un producto');return;}
   if(!S.cliente){var cf=document.getElementById('checkout-form');if(cf.style.display==='none'){cf.style.display='block';cf.scrollIntoView({behavior:'smooth'});return;}var n=document.getElementById('inp-nombre').value.trim(),t=document.getElementById('inp-tel').value.trim(),d=document.getElementById('inp-dir').value.trim(),p2=document.getElementById('inp-piso').value.trim();if(!n||!t||!d){alert('Completa nombre, telefono y direccion');return;}S.cliente={nombre:n,tel:t,dir:d,piso:p2};try{localStorage.setItem('lmdh_cli',JSON.stringify(S.cliente));}catch(e){}document.getElementById('checkout-form').style.display='none';document.getElementById('cli-info').style.display='block';document.getElementById('cli-nombre').textContent=S.cliente.nombre;document.getElementById('cli-dir').textContent=S.cliente.dir+(S.cliente.piso?' - '+S.cliente.piso:'');}
   var total=0,det=items.map(function(i){total+=i.sub;return{nombre:i.nombre,qty:i.qty,precio:i.precio,sub:i.sub};});
@@ -1023,6 +1024,7 @@ async function checkoutEnviarNuevo(){
 }
 
 async function _enviarPedidoCheckout(cli,fechaVal,fechaLabel,pago,nota){
+  if(S_ENVIANDO){return;} // Evitar doble envio
   var items=getCartItems();
   if(!items.length){alert('El carrito esta vacio');return;}
   var total=0,det=items.map(function(i){total+=i.sub;return{nombre:i.nombre,qty:i.qty,precio:i.precio,sub:i.sub};});
@@ -1034,11 +1036,24 @@ async function _enviarPedidoCheckout(cli,fechaVal,fechaLabel,pago,nota){
     items:det,subtotal:total,descuentoPuntos:0,descuentoAdmin:0,descuentoMotivo:'',
     total:totalF,nota:nota,pago:pago,
     envioGratis:total>=20000,estado:'recibido',obsInterna:'',telefonico:false};
-  await dbSet('pedido:'+id,pedido);
-  await actualizarCliente(pedido,0);
-  await descontarStock(S.cart);
-  S.cart={};updateBadge();renderProductos();
-  showConfirmModal(pedido,Math.floor(totalF/1000)*PTS_POR_MIL);
+  S_ENVIANDO=true;
+  // Deshabilitar botones de envio
+  ['btn-enviar-pedido','btn-enviar-checkout'].forEach(function(id){
+    var b=document.getElementById(id);
+    if(b){b.disabled=true;b.textContent='Enviando...';}
+  });
+  try{
+    await dbSet('pedido:'+id,pedido);
+    await actualizarCliente(pedido,0);
+    await descontarStock(S.cart);
+    S.cart={};updateBadge();renderProductos();
+    showConfirmModal(pedido,Math.floor(totalF/1000)*PTS_POR_MIL);
+  }catch(e){
+    console.error('Error enviando pedido:',e);
+    alert('Error al enviar el pedido. Intenta de nuevo.');
+  }finally{
+    S_ENVIANDO=false;
+  }
 }
 
 
@@ -1046,6 +1061,7 @@ async function _enviarPedidoCheckout(cli,fechaVal,fechaLabel,pago,nota){
 // MODULO PUNTOS Y BONIFICACIONES
 // ============================================================
 var CFG_PUNTOS={porMil:1,valorPunto:10,paraDesc:100};
+var S_ENVIANDO=false; // Flag para evitar pedidos duplicados
 var BONIFICACIONES=[];
 
 async function renderModuloPuntos(){
