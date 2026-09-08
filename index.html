@@ -264,61 +264,71 @@ input:focus,textarea:focus,select:focus{border-color:var(--pr);background:#fff;}
         <div id="cal-day-orders"><div class="ld">Selecciona un dia</div></div>
       </div>
       <div class="asec" id="adm-nuevopedido">
-        <div class="card">
-          <div class="sec">Nuevo pedido telefonico</div>
-          <label>Buscar cliente existente</label>
-          <div style="display:flex;gap:6px">
-            <input id="np-buscar" placeholder="Nombre o telefono" style="flex:1">
-            <button class="btn bp bsm" style="width:auto;margin:0" onclick="npBuscarCliente()">Buscar</button>
-          </div>
-          <div id="np-resultados" style="margin-top:6px"></div>
-          <div id="np-cliente-form">
-            <label>Nombre</label><input id="np-nombre" placeholder="Maria Gonzalez">
-            <label>Telefono</label><input id="np-tel" type="tel" placeholder="1155556666">
-            <label>Direccion</label><input id="np-dir" placeholder="Av. Corrientes 1234">
-            <label>Piso/Depto (opcional)</label><input id="np-piso" placeholder="3 B">
-          </div>
+  <div class="np-layout">
+    <!-- COLUMNA IZQUIERDA -->
+    <div class="np-main">
+      <div class="card">
+        <div class="sec">Datos del cliente</div>
+        <label>Buscar cliente existente</label>
+        <div style="display:flex;gap:6px">
+          <input id="np-buscar" placeholder="Nombre o telefono" style="flex:1">
+          <button class="btn bp bsm" style="width:auto;margin:0" onclick="npBuscarCliente()">Buscar</button>
         </div>
-        <div class="card">
-      <div class="sec">Productos</div>
-      <div class="buscador-cont" style="margin-bottom:10px">
-        <span class="buscador-ico">🔍</span>
-        <input class="buscador-input" id="buscador-np" placeholder="Buscar producto..." oninput="buscarProductoNp(this.value)" autocomplete="off">
-        <button class="buscador-clear" id="buscador-np-clear" onclick="limpiarBuscadorNp()">✕</button>
+        <div id="np-resultados" style="margin-top:6px"></div>
+        <div id="np-cliente-form">
+          <label>Nombre</label><input id="np-nombre" placeholder="Maria Gonzalez">
+          <label>Telefono</label><input id="np-tel" type="tel" placeholder="1155556666">
+          <label>Direccion</label><input id="np-dir" placeholder="Av. Corrientes 1234">
+          <label>Piso/Depto (opcional)</label><input id="np-piso" placeholder="3 B">
+        </div>
       </div>
-      <div id="np-product-list"><div class="ld">Cargando...</div></div>
+      <div class="card">
+        <div class="sec">Productos</div>
+        <div class="buscador-cont" style="margin-bottom:10px">
+          <span class="buscador-ico">🔍</span>
+          <input class="buscador-input" id="buscador-np" placeholder="Buscar producto..." oninput="buscarProductoNp(this.value)" autocomplete="off">
+          <button class="buscador-clear" id="buscador-np-clear" onclick="limpiarBuscadorNp()">✕</button>
+        </div>
+        <div id="np-product-list"><div class="ld">Cargando...</div></div>
+      </div>
     </div>
+    <!-- COLUMNA DERECHA: Resumen siempre visible -->
+    <div class="np-sidebar">
+      <div class="np-resumen-card">
+        <div class="sec">📋 Resumen del pedido</div>
+        <div id="np-cart-preview"><p style="font-size:.8rem;color:var(--mu);text-align:center;padding:15px 0">Agrega productos para ver el resumen</p></div>
+        <div class="ct" id="np-cart-total"></div>
+        <div id="np-desc-preview" style="font-size:.78rem;color:var(--ok);margin-top:4px;font-weight:600"></div>
         <div id="np-cart-section" style="display:none">
-          <div class="card">
-            <div class="sec">Resumen del pedido</div>
-            <div id="np-cart-preview"></div>
-            <div class="ct" id="np-cart-total"></div>
-            <label>Fecha del pedido</label>
-            <input type="date" id="np-fecha-entrega" style="margin-bottom:4px">
-            <p style="font-size:.72rem;color:var(--mu);margin-bottom:8px">Podés cargar fechas pasadas para no perder estadistica</p>
-            <label>Estado del pedido</label>
-            <select id="np-estado">
-              <option value="recibido">Recibido</option>
-              <option value="preparando">Preparando</option>
-              <option value="listo">Listo</option>
-              <option value="entregado">Entregado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-            <label>Forma de pago</label>
-            <select id="np-pago"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
-            <label>Nota / Observacion interna</label>
-            <textarea id="np-nota" rows="2" placeholder="Ej: milanesas finitas, sin ajo..."></textarea>
-            <label>Descuento (opcional)</label>
-            <div style="display:flex;gap:7px;align-items:center;margin-top:4px">
-              <select id="np-desc-tipo" style="flex:1;margin:0;padding:7px"><option value="pct">%</option><option value="monto">$</option></select>
-              <input id="np-desc-val" type="number" placeholder="0" style="flex:1;margin:0" oninput="npCalcDesc()">
-            </div>
-            <div id="np-desc-preview" style="font-size:.78rem;color:var(--ok);margin-top:4px;font-weight:600"></div>
-            <button class="btn bp" onclick="npEnviarPedido()">Registrar pedido</button>
+          <label>Fecha del pedido</label>
+          <input type="date" id="np-fecha-entrega" style="margin-bottom:4px">
+          <p style="font-size:.72rem;color:var(--mu);margin-bottom:6px">Podés cargar fechas pasadas para no perder estadistica</p>
+          <label>Estado del pedido</label>
+          <select id="np-estado">
+            <option value="recibido">Recibido</option>
+            <option value="preparando">Preparando</option>
+            <option value="listo">Listo</option>
+            <option value="entregado">Entregado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <label>Forma de pago</label>
+          <select id="np-pago"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
+          <label>Descuento (opcional)</label>
+          <div style="display:flex;gap:7px;align-items:center;margin-top:4px">
+            <select id="np-desc-tipo" style="flex:1;margin:0;padding:7px"><option value="pct">%</option><option value="monto">$</option></select>
+            <input id="np-desc-val" type="number" placeholder="0" style="flex:1;margin:0" oninput="npCalcDesc()">
           </div>
+          <label>Nota / Observacion interna</label>
+          <textarea id="np-nota" rows="2" placeholder="Ej: milanesas finitas, sin ajo..."></textarea>
+          <button class="btn bp" style="margin-top:10px" onclick="npEnviarPedido()">✅ Registrar pedido</button>
+          <button class="btn bs" style="margin-top:6px" onclick="npCancelarPedido()">✕ Cancelar y limpiar</button>
         </div>
       </div>
-      <div class="asec" id="adm-pedidos">
+    </div>
+  </div>
+</div>
+
+<div class="asec" id="adm-pedidos">
         <div style="display:flex;gap:7px;margin-bottom:10px">
           <select id="filtro-estado" onchange="renderAdminPedidos()" style="flex:1;margin:0;padding:7px">
             <option value="">Todos</option><option value="recibido">Recibido</option><option value="preparando">Preparando</option>
