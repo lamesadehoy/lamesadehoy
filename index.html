@@ -641,21 +641,34 @@ async function dbSetConfig(key,val){
   try{await db.collection('config').doc(key).set({_json:JSON.stringify(val)});}catch(e){console.error('dbSetConfig',e);}
 }
 async function init(){
-  // Productos
-  var p=await dbGetConfig('productos');
-  S.productos=(Array.isArray(p)&&p.length)?p:PD;
-  if(!Array.isArray(p)||!p.length) await dbSetConfig('productos',S.productos);
-
-  // Categorias
-  var c=await dbGetConfig('categorias');
-  S.categorias=(Array.isArray(c)&&c.length)?c:CATS_DEFAULT.slice();
-  if(!Array.isArray(c)||!c.length) await dbSetConfig('categorias',S.categorias);
-
-  // Combos
-  var cb=await dbGetConfig('combos');
-  S.combos=(Array.isArray(cb)&&cb.length)?cb:COMBOS_DEFAULT.slice();
-  if(!Array.isArray(cb)||!cb.length) await dbSetConfig('combos',S.combos);
-
+  try{
+    var p=await dbGetConfig('productos');
+    if(Array.isArray(p)&&p.length){
+      S.productos=p;
+    } else {
+      S.productos=PD;
+      await dbSetConfig('productos',S.productos);
+    }
+    var c=await dbGetConfig('categorias');
+    if(Array.isArray(c)&&c.length){
+      S.categorias=c;
+    } else {
+      S.categorias=CATS_DEFAULT.slice();
+      await dbSetConfig('categorias',S.categorias);
+    }
+    var cb=await dbGetConfig('combos');
+    if(Array.isArray(cb)&&cb.length){
+      S.combos=cb;
+    } else {
+      S.combos=COMBOS_DEFAULT.slice();
+      await dbSetConfig('combos',S.combos);
+    }
+  }catch(e){
+    console.error('Error Firebase:',e);
+    if(!S.productos.length)S.productos=PD;
+    if(!S.categorias.length)S.categorias=CATS_DEFAULT.slice();
+    if(!S.combos.length)S.combos=COMBOS_DEFAULT.slice();
+  }
   poblarCatSelects();
   if(S.cliente)renderClienteLoggeado();else renderProductos();
   poblarFechas('inp-fecha-entrega');poblarFechas('np-fecha-entrega');
